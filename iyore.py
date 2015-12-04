@@ -70,6 +70,7 @@ class Dataset(object):
             # TODO: comments
             # TODO: more descriptive errors?
             # TODO: show neighboring lines and highlight error
+            # TODO: ensure endpoint names are valid Python identifiers
 
             for linenum, line in enumerate(f):
                 # split indentation and content
@@ -186,7 +187,7 @@ class Endpoint(object):
                 return subsequentMatches
 
     def __repr__(self):
-        return "Endpoint('{}'), fields: {}".format("/".join(part.value for part in self.parts),
+        return "Endpoint('{}'), fields: {}".format([part.value for part in self.parts],
                                                    ", ".join(self.fields))
 
 class Subset(object):
@@ -368,6 +369,7 @@ class Entry(object):
     # ._exists()
     # ._listdir()
     # TODO: dict-like?
+    # TODO: open()
     def __init__(self, path, fields= {}):
         self.path = path
         self.fields = fields
