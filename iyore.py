@@ -8,6 +8,8 @@ import os
 import sys
 import numbers
 import functools
+import itertools
+import operator
 import inspect
 import traceback
 
@@ -148,7 +150,8 @@ class Endpoint(object):
         self.fields = set.union( *(set(part.fields) for part in self.parts) )
 
     def __call__(self, **params):
-        return self._match(self.base, self.parts, params)
+        matches = self._match(self.base, self.parts, params)
+        return Subset(matches)
 
     def _match(self, baseEntry, partsPatterns, params):
         # TODO: what about multiple leaf patterns?
@@ -185,6 +188,73 @@ class Endpoint(object):
     def __repr__(self):
         return "Endpoint('{}'), fields: {}".format("/".join(part.value for part in self.parts),
                                                    ", ".join(self.fields))
+
+class Subset(object):
+    # A chainable iterator (that probably needs a different name)
+    # Allows basic vectorized operations on an iterable
+
+    # head()
+    # tail()
+    # slice()
+    # filter()
+    # map() -> combine()
+    # attrs for each field in endpoint give subsets that iterate through just that field, not whole Entry
+    # all of which return a new subset with a modified parser chain
+    # + to union
+
+    def __init__(self, iterable):
+        self._iter = iter(iterable)
+
+    def chain(self, func):
+        # TODO: private? or classmethod?
+        return Subset( func(self._iter) )
+
+    def __getattr__(self, attr):
+        try:
+            return self.__dict__[attr]
+        except KeyError:
+            return self.chain( functools.partial(map, operator.attrgetter(attr)) )
+
+    def __iter__(self):
+        return self._iter
+        # return functools.reduce(lambda chain, func: func(chain), self._operations, self._entries)
+
+    def __add__(self, subset):
+        if not isinstance(subset, Subset):
+            raise TypeError("Expected another Subset, instead got '{}'".format(type(subset).__name__))
+        return Subset( itertools.chain(self._iter, subset._iter) )
+
+    def head(self, n= 5):
+        def do_head(iterable):
+            return itertools.islice(iterable, n)
+        return self.chain(do_head)
+
+    def tail(self, n= 5):
+        def do_tail(iterable):
+            return itertools.islice(iterable, -n, -1)
+        return self.chain(do_tail)
+
+    def slice(self, *args):
+        # slice([start,] stop [, step])
+        if len(args) == 0:
+            raise TypeError("slice expected at least 1 argument, got 0")
+        elif len(args) > 3:
+            raise TypeError("slice expected at most 3 argument, got {}".format(len(args)))
+        else:
+            def do_slice(iterable):
+                return itertools.islice(iterable, *args)
+
+            return self.chain(do_slice)
+
+    def filter(self, predicate):
+        return self.chain( functools.partial(filter, predicate) )
+
+    def map(self, func):
+        return self.chain( functools.partial(map, func) )
+
+    def combine(self, func):
+        return func(self._iter)
+
 
 class Pattern(object):
 
