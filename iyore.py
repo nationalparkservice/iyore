@@ -55,25 +55,19 @@ class Dataset(object):
         patternsStack = []
         endpoints = {}
         lastIndent = 0
-        importsOver = False
-        env = {}
 
         # TODO: maybe custom exception class?:
-        def error(msg, line, linenum, print_exc= False):
+        def error(msg, line, linenum):
             print('Error in structure file "{}", line {}:\n{}\n{}'.format(structfilePath, linenum+1, line, msg), file= sys.stderr)
-            if print_exc:
-                traceback.print_exc()
             raise ValueError('Error on line {} in file "{}"'.format(linenum, structfilePath))
 
         linePattern = re.compile(r"(\s*)(.*)")      # groups: indent, content
         importLinePattern = re.compile(r"^(?:from\s+.+\s+)?(?:import\s+.+\s*)(?:as\s+.+\s*)?$")
-        # contentPattern = re.compile(r"(?:([A-z]\w*):\s?)?(.+)")     # groups: endpointName, endpointPattern
-        contentPattern = re.compile(r"^(?:([A-z]\w*):\s*)?(.+?)(\s*(?:>>|->).+)?$")     # groups: endpointName, endpointPattern, parsers
+        contentPattern = re.compile(r"(?:([A-z]\w*):\s?)?(.+)")     # groups: endpointName, endpointPattern
         with open(structfilePath, encoding= "utf-8") as f:
             # TODO: comments
             # TODO: more descriptive errors?
             # TODO: show neighboring lines and highlight error
-            # TODO: gracefully handle missing imports
 
             for linenum, line in enumerate(f):
                 # split indentation and content
@@ -87,73 +81,17 @@ class Dataset(object):
                     # TODO: maybe only allow if ind == "" as well?
                     continue
 
-                if not importsOver:
-                    if importLinePattern.match(content):
-                        if ind != "":
-                            error("Unexpected indent in import line", line, linenum)
-                        else:
-                            try:
-                                exec(line, env)
-                                continue
-                            except:
-                                error("An exception occured while executing this line:", line, linenum, print_exc= True)
-
-                # split (possible) endpoint name, pattern, and parsers
+                # split (possible) endpoint name, pattern
                 try:
-                    name, pattern, parsers = contentPattern.match(content).groups()
+                    name, pattern = contentPattern.match(content).groups()
                 except AttributeError:
                     error("Unparseable entry", line, linenum)
-
-                if pattern[-1] == '>':
-                    # cheap test to check for a parser arrow given with no parsers following it
-                    # Unreachable?
-                    error("No parsers listed after symbol '{}'".format(pattern[-2:]), line, linenum)
 
                 # parse pattern
                 try:
                     pattern = Pattern(pattern)
                 except ValueError as e:
                     error(e.args[0], line, linenum)
-
-                # parse parsers
-                parsedParsers = []
-                if parsers:
-                    if name is None:
-                        error("Parsers can only be given for endpoints, but this entry has no name", line, linenum)
-                    segments = re.split(r"\s*(>>|->)\s*", parsers.strip())
-                    if len(segments) < 3:
-                        error("Unparseable parser sequence '{}'".format(parsers.strip()), line, linenum)
-                    if segments[0] != '':
-                        error("Unexpected token '{}' preceding first parser arrow".format(segments[0]), line, linenum)
-                    segments = segments[1:]
-                    for i in range(0, len(segments), 2):
-                        try:
-                            arrow = segments[i]
-                            parserStr = segments[i+1]
-                        except IndexError:
-                            # Unreachable?
-                            error("Dangling parser arrow '{}' at end of line".format(arrow), line, linenum)
-
-                        if parserStr == "":
-                            error("No parser string found after arrow #{}".format(int(i/2) + 1), line, linenum)
-
-                        if arrow == ">>":
-                            isReducer = False
-                        elif arrow == "->":
-                            isReducer = True
-                        else:
-                            # Unreachable?
-                            error("Expected parser arrow, instead found '{}'".format(arrow), line, linenum)
-                        
-                        try:
-                            parser = eval(parserStr, env)
-                        except:
-                            error("An exception occured while evaluating the parser '{}':".format(parserStr), line, linenum, print_exc= True)
-                        if not hasattr(parser, "__call__"):
-                            error("'{}' evaluates to '{!r}', which is not a callable object".format(parserStr, parser), line, linenum)
-
-                        parsedParsers.append( (parser, isReducer) )
-
 
                 # determine indentation format from first lines
                 if indent is None:
@@ -190,89 +128,27 @@ class Dataset(object):
                     error("Too many indents: previous line was indented {} times, so this can be indented at most {} times, but found {} indents".format(lastIndent, lastIndent+1, currentIndent), line, linenum)
 
                 lastIndent = currentIndent
-                importsOver = True
 
                 # if a name is given, register (a copy of) the current pattern stack as an endpoint
                 # TODO: multiple leaf patterns
                 if name is not None:
-                    ep = Endpoint(list(patternsStack), self.base)
-                    for (parser, isReducer) in parsedParsers:
-                        if isReducer:
-                            ep.addReducers(parser)
-                        else:
-                            ep.addMappers(parser)
                     if name in endpoints:
                         error("The endpoint '{}' already exists, try a different name".format(name), line, linenum)
                     else:
-                        endpoints[name] = ep
+                        endpoints[name] = Endpoint(list(patternsStack), self.base)
 
         return endpoints
 
 
 class Endpoint(object):
-    def __init__(self, parts, base, mappers= [], reducers= []):
+    def __init__(self, parts, base):
         # TODO: hold dataset instead of base?
         self.base = base if isinstance(base, Entry) else Entry(base)
         self.parts = parts if isinstance(parts[0], Pattern) else list(map(Pattern, parts))
         self.fields = set.union( *(set(part.fields) for part in self.parts) )
-        self.parsers = []  # list of iterator-processing functions, which take an iterator and return an iterator
-        self._parser_kwargs_order = {}  # { "funcname_argname" : index of func in self.parsers }
-        self.addMappers(*mappers)
-        self.addReducers(*reducers)
 
-    def addMappers(self, *funcs):
-        # Funcs should take a single value and return a single value.
-        # For each entry matched, the chain is called in order, with the result of the previous function as the argument to the next
-        # The first func will be given an Entry object
-        self._addParsers(funcs, reducers= False)
-
-    def addReducers(self, *funcs):
-        # The first func should take an iterator
-        self._addParsers(funcs, reducers= True)
-
-    def _addParsers(self, funcs, reducers= False):
-        for i, func in enumerate(funcs):
-            if reducers:
-                self.parsers.append(func)
-            else:
-                self.parsers.append( (lambda f: lambda iterable, **kwargs: map(lambda x: f(x, **kwargs), iterable))(func) )
-
-            try:
-                fname = func.__name__
-                if fname == '<lambda>': continue
-            except AttributeError:
-                # continue
-                raise TypeError("Argument {} to addMappers has no __name__ attribute".format(i))
-
-            try:
-                argspec = inspect.getargspec(func)
-            except TypeError:
-                continue
-            if argspec.defaults is None: continue
-            for kwarg_name in argspec.args[len(argspec.defaults):]:
-                self._parser_kwargs_order[ fname+'_'+kwarg_name ] = (len(self.parsers)-1, kwarg_name)
-
-    def where(self, **params):
-        # ALTERNATIVELY: kwarg for each parser function, which takes a dict of that function's args
-        chain_kwargs = [{} for _ in self.parsers]
-        for kwarg, val in iteritems(params):
-            if kwarg in self.fields:
-                continue
-            try:
-                order, orig_kwarg = self._parser_kwargs_order[kwarg]
-            except KeyError:
-                raise TypeError("where() got unexpected keyword argument '{}', which is neither a field nor a parser's keyword argument".format(kwarg))
-            chain_kwargs[order][orig_kwarg] = val
-
-        matches = self._match(self.base, self.parts, params)
-
-        # TODO: time progress and potentially subprocess parser chain to unblock IO
-        parsedMatchesIter = functools.reduce(lambda chain, funcAndKwargs: funcAndKwargs[0](chain, **funcAndKwargs[1]), zip(self.parsers, chain_kwargs), matches)
-
-        return parsedMatchesIter
-
-    def __iter__(self):
-        return self.where()
+    def __call__(self, **params):
+        return self._match(self.base, self.parts, params)
 
     def _match(self, baseEntry, partsPatterns, params):
         # TODO: what about multiple leaf patterns?
