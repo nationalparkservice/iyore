@@ -165,26 +165,21 @@ class Endpoint(object):
             here = baseEntry._join(pattern.value, {})
             if here._exists():
                 if rest == []:
-                    return [here]
+                    yield here
                 else:
-                    return self._match(here, rest, params)
-            else:
-                return []
+                    for entry in self._match(here, rest, params):
+                        yield entry
 
         else:
-            matchingEntries = []
             for name in baseEntry._listdir():
                 fieldVals = pattern.matches(name, **params)
                 if fieldVals is not None:
-                    matchingEntries.append( baseEntry._join(name, fieldVals) )
-
-            if rest == []:
-                return matchingEntries
-            else:
-                subsequentMatches = []
-                for entry in matchingEntries:
-                    subsequentMatches.extend( self._match(entry, rest, params) )
-                return subsequentMatches
+                    here = baseEntry._join(name, fieldVals)
+                    if rest == []:
+                        yield here
+                    else:
+                        for entry in self._match(here, rest, params):
+                            yield entry
 
     def __repr__(self):
         return "Endpoint('{}'), fields: {}".format([part.value for part in self.parts],

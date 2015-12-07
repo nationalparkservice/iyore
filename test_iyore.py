@@ -150,7 +150,7 @@ class TestMatchingAndQuerying:
 
     def test_datafiles_invalid_parameter(self, makeTestTree, datafiles_endpoint):
         with pytest.raises(TypeError):
-            datafiles_endpoint(name= False)
+            set(entry.path for entry in datafiles_endpoint(name= False))
 
     @pytest.fixture(scope= "module")
     def all_sitedocs(makeTestTree):
