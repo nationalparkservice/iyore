@@ -5,9 +5,17 @@ Easing the thistly problem of accessing data stored in arbitrary, consistent dir
 
 --------------------------------------------------------------------------
 
-The most common database is not MySQL, Access, or Mongo: it's the filesystem. It's familiar, user-friendly, and requires zero installation. Vast quantities of data of any kind---particularly from less-technical users---are often stored in nested folders. There's usually a pattern to the structure and the names of the files and folders, but writing code to traverse every new directory structure you come across gets tedious.
+The most common database is not MySQL, Access, or Mongo: it's the filesystem.
+It's familiar, user-friendly, and requires zero installation. Vast quantities of
+data of any kind---particularly from less-technical users---are often stored in
+nested folders. There's usually a pattern to the structure and the names of the
+files and folders, but writing code to traverse every new directory structure
+you come across gets tedious.
 
-iyore is pronounced "EYE-or", like Eeyore, and I/O, but eaten by a Python. If you write a file of regular expressions describing each level of your directory structure, it gives you iterators over each distinct kind of data it contains, plus lets you subset the data based on patterns in the file and folder names.
+iyore is pronounced "EYE-or", like Eeyore, and I/O, but eaten by a Python. If
+you write a file of regular expressions describing each level of your directory
+structure, it gives you iterators over each distinct kind of data it contains,
+plus lets you subset the data based on patterns in the file and folder names.
 
 Say you have a folder structure like this:
 ```
@@ -43,7 +51,10 @@ Winnie The Pooh Data
               \- first_page.png
 ```
 
-The relevant data are quotes (by a certain character) and images from the chapter. The names of the files and folders follow consistent patterns, but also contain essential metadata (which character the quotes are for, the chapter number, etc.).
+The relevant data are quotes (by a certain character) and images from the
+chapter. The names of the files and folders follow consistent patterns, but also
+contain essential metadata (which character the quotes are for, the chapter
+number, etc.).
 
 To easily access this data with iyore, we'd first write a structure file describing the dataset:
 ```
@@ -53,11 +64,22 @@ Chapters
         images: (?P<title>.*).png
 ```
 
-Each line contains a regular expression that matches a file or folder name. Notice the named capturing groups, like `(?P<chap_num>\d\d) (?P<chap_title>.+)`. Labeling these fields in the name will allow us to subselect data from only certain `chap_num`s or `chap_title`s. The indentation describes the folder structure. (Like Python, you can use tabs or spaces, so long as you're consistent with the indentation character and width.)
+Each line contains a regular expression that matches a file or folder name.
+Notice the named capturing groups, like `(?P<chap_num>\d\d) (?P<chap_title>.+)`.
+Labeling these fields in the name will allow us to subselect data from only
+certain `chap_num`s or `chap_title`s. The indentation describes the folder
+structure: each subfolder or file is indented one level further than its parent.
+(Like Python, you can use tabs or spaces, so long as you're consistent with the
+indentation character and width.)
 
-The two kinds of data we actually want to access are `quotes` and `images`. We refer to these as `Endpoint`s, which are specified by prefixing the regex pattern for a file or folder with `<endpoint_name>` and a colon. (Note that `Endpoint`s could be folders as well as files, and there can be more folders or `Endpoint`s within them.)
+The two kinds of data we actually want to access are `quotes` and `images`. We
+refer to these as `Endpoint`s, which are specified by prefixing the regex
+pattern for a file or folder with `<endpoint_name>` and a colon. (Note that
+`Endpoint`s could be folders as well as files, and there can be more folders or
+`Endpoint`s within them.)
 
-This structure file should be saved in the root directory of your dataset---in this case, as `Winnie The Pooh Data/.structure.txt`.
+This structure file should be saved in the root directory of your dataset---in
+this case, as `Winnie The Pooh Data/.structure.txt`.
 
 ------------------------------------------------------------------
 
@@ -73,7 +95,8 @@ Endpoints:
   - images: Endpoint(['Chapters','(?P<chap_num>\\d\\d) (?P<chap_title>.+)','(?P<title>.*).png']), fields: chap_num, chap_title, title
 ```
 
-A `Dataset` is created with the path to a structure file, and just has attributes for each of the `Endpoint`s in that structure file.
+A `Dataset` is created with the path to a structure file, and just has
+attributes for each of the `Endpoint`s in that structure file.
 
 Let's look at all of the quotes in this dataset:
 
@@ -88,9 +111,13 @@ Chapters/02 In Which Pooh Goes Visiting and Gets into a Tight Place/tigger-quote
     ...
 ```
 
-`ds.quotes` is an `Endpoint`: one kind of data you want. Calling `ds.quotes()` returns an iterator through all quotes `Entry`s in the dataset.
+`ds.quotes is an Endpoint: one kind of data you want. Calling ds.quotes()
+`returns an iterator through all quotes Entrys in the dataset.
 
-An `Entry` is a single, concrete file or folder in a dataset. Besides the `path` attribute, an `Entry` also has a dictionary of `fields`. This contains the values matched by all the named capturing groups. For convenience, you can also access particular fields using dot notation:
+An `Entry` (as in, a directory entry) is a single, concrete file or folder in a
+dataset. Besides the `path` attribute, an `Entry` also has a dictionary of
+`fields`. This contains the values matched by all the named capturing groups.
+For convenience, you can also access particular fields using dot notation:
 
 ```python
 >>> for entry in ds.quotes():
@@ -113,7 +140,8 @@ From here, you can use the `Entry`s for data processing:
 
 What if you don't want all quotes, but just quotes from Piglet from the first three chapters?
 
-When calling an `Endpoint` to iterate through it, you can give keyword arguments to restrict the values allowed in each field:
+When calling an `Endpoint` to iterate through it, you can give keyword arguments
+to restrict the values allowed in each field:
 
 ```python
 >>> for entry in ds.quotes(character= "piglet", chap_num= ["01", "02", "03"]):
@@ -137,10 +165,14 @@ Here are the different types of arguments you can give to restrict the values fo
 
 ### Logistics
 
-iyore has no dependencies besides the `future` package, which makes it Python 2 and 3 cross-compatible.
+iyore is Python 2 and 3 cross-compatible, and depends only on the `future`
+package (which allows the cross-compatibility)
 
 To install iyore, clone this repository, `cd` into it, then run `pip install .`
 
-If you want to run the tests (which are probably not complete), run `python setup.py test`, which will also install `pytest` if you don't already have it.
+If you want to run the tests (which are probably not complete), run `python
+setup.py test`, which will also install `pytest` if you don't already have it.
 
-Though all functionality should work, this library is still in its infancy and subject to significant change. Plus, many planned features are still currently missing.
+Though all functionality should work, this library is still in its infancy and
+subject to significant change. Plus, many planned features are still currently
+missing.
