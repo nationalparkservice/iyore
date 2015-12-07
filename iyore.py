@@ -292,6 +292,9 @@ class Pattern(object):
                         ## - binary arrays?
                         ## - indexed pandas frames
 
+                        if restriction is None:
+                            continue
+
                         ## Singletons
                         if isinstance(restriction, str):
                             if value == restriction:
@@ -374,8 +377,8 @@ class Entry(object):
         return open(self.path, mode= mode, buffering= buffering, encoding= encoding, errors= errors, newline= newline)
 
     def __init__(self, path, fields= {}):
-        self.path = path
-        self.fields = fields
+        self.__dict__["path"] = path
+        self.__dict__["fields"] = fields
 
     def _join(self, path, newFields):
         newPath = os.path.join(self.path, path)
@@ -397,6 +400,12 @@ class Entry(object):
             except KeyError:
                 raise AttributeError("Entry instance has no field or attribute '{}'".format(attr))
 
+    def __setattr__(self, attr, val):
+        if attr in self.__dict__:
+            self.__dict__[attr] = val
+        else:
+            self.fields[attr] = val
+
     def __getitem__(self, item):
         try:
             return self.fields[item]
@@ -405,6 +414,9 @@ class Entry(object):
                 return self.path
             else:
                 raise KeyError("Entry has no field '{}'".format(item))
+
+    def __setitem__(self, item, val):
+        self.fields[item] = val
 
     def __dir__(self):
         return self.fields.keys() + dir(self)
