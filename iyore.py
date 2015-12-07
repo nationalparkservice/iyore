@@ -370,6 +370,9 @@ class Entry(object):
     # ._listdir()
     # TODO: dict-like?
     # TODO: open()
+    def open(self, mode='r', buffering=-1, encoding=None, errors=None, newline=None):
+        return open(self.path, mode= mode, buffering= buffering, encoding= encoding, errors= errors, newline= newline)
+
     def __init__(self, path, fields= {}):
         self.path = path
         self.fields = fields
@@ -394,6 +397,15 @@ class Entry(object):
             except KeyError:
                 raise AttributeError("Entry instance has no field or attribute '{}'".format(attr))
 
+    def __getitem__(self, item):
+        try:
+            return self.fields[item]
+        except KeyError:
+            if item == "path":
+                return self.path
+            else:
+                raise KeyError("Entry has no field '{}'".format(item))
+
     def __dir__(self):
         return self.fields.keys() + dir(self)
 
@@ -402,6 +414,38 @@ class Entry(object):
             return self.path == other.path
         elif isinstance(other, str):
             return other == self.path
+        else:
+            return False
+
+    def __lt__(self, other):
+        if isinstance(other, Entry):
+            return self.path < other.path
+        elif isinstance(other, str):
+            return other < self.path
+        else:
+            return False
+
+    def __gt__(self, other):
+        if isinstance(other, Entry):
+            return self.path > other.path
+        elif isinstance(other, str):
+            return other > self.path
+        else:
+            return False
+
+    def __ge__(self, other):
+        if isinstance(other, Entry):
+            return self.path >= other.path
+        elif isinstance(other, str):
+            return other >= self.path
+        else:
+            return False
+
+    def __le__(self, other):
+        if isinstance(other, Entry):
+            return self.path <= other.path
+        elif isinstance(other, str):
+            return other <= self.path
         else:
             return False
 
