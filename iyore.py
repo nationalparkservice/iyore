@@ -7,6 +7,7 @@ import re
 import os
 import sys
 import numbers
+import io
 import functools
 import itertools
 import operator
@@ -29,13 +30,17 @@ structureFileName = ".structure.txt"
 
 class Dataset(object):
     # TODO: dict-like?
-    def __init__(self, path):
-        # TODO: smarter finding structure file
-        dirname, basename = os.path.split(path)
-        if basename == "":
-            basename = structureFileName
-        self.base = Entry(dirname)
-        self.endpoints = self._parseStructureFile(os.path.join(dirname, basename))
+    def __init__(self, path, structure= None):
+        if structure is None:
+            # TODO: smarter finding structure file
+            dirname, basename = os.path.split(path)
+            if basename == "":
+                basename = structureFileName
+            self.base = Entry(dirname)
+            self.endpoints = self._parseStructureFile(structfilePath= os.path.join(dirname, basename))
+        else:
+            self.base = Entry(path)
+            self.endpoints = self._parseStructureFile(structfileString= structure)
 
     def __getattr__(self, attr):
         try:
@@ -47,12 +52,16 @@ class Dataset(object):
                 raise AttributeError("Dataset instance has no endpoint or attribute '{}'".format(attr))
 
     def __dir__(self):
+        # TODO: infinite recursion
         return self.endpoints.keys() + dir(self)
 
     def __repr__(self):
         return 'Dataset("{}")\nEndpoints:\n{}'.format(self.base.path, "\n".join("  - {}: {}".format(name, repr(endpoint)) for name, endpoint in iteritems(self.endpoints)))
 
-    def _parseStructureFile(self, structfilePath):
+    def _parseStructureFile(self, structfilePath= None, structfileString= None):
+        if structfilePath is None and structfileString is None:
+            raise ValueError("No structure file path or string given")
+
         indent = None
         patternsStack = []
         endpoints = {}
@@ -66,7 +75,7 @@ class Dataset(object):
         linePattern = re.compile(r"(\s*)(.*)")      # groups: indent, content
         importLinePattern = re.compile(r"^(?:from\s+.+\s+)?(?:import\s+.+\s*)(?:as\s+.+\s*)?$")
         contentPattern = re.compile(r"(?:([A-z]\w*):\s?)?(.+)")     # groups: endpointName, endpointPattern
-        with open(structfilePath, encoding= "utf-8") as f:
+        with open(structfilePath, encoding= "utf-8") if structfilePath else io.StringIO(structfileString) as f:
             # TODO: comments
             # TODO: more descriptive errors?
             # TODO: show neighboring lines and highlight error
