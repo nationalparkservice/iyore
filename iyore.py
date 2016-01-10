@@ -40,7 +40,7 @@ class Dataset(object):
             self.endpoints = self._parseStructureFile(structfilePath= os.path.join(dirname, basename))
         else:
             self.base = Entry(path)
-            self.endpoints = self._parseStructureFile(structfileString= structure)
+            self.endpoints = self._parseStructureFile(structfileString= str(structure))
 
     def __getattr__(self, attr):
         try:
@@ -52,7 +52,7 @@ class Dataset(object):
                 raise AttributeError("Dataset instance has no endpoint or attribute '{}'".format(attr))
 
     def __dir__(self):
-        # TODO: infinite recursion
+        # TODO: infinite recursion!!
         return self.endpoints.keys() + dir(self)
 
     def __repr__(self):
@@ -206,6 +206,7 @@ class Subset(object):
     # attrs for each field in endpoint give subsets that iterate through just that field, not whole Entry
     # all of which return a new subset with a modified parser chain
     # + to union
+    # TODO: print / repr
 
     def __init__(self, iterable):
         self._iter = iter(iterable)
@@ -423,6 +424,7 @@ class Entry(object):
         self.fields[item] = val
 
     def __dir__(self):
+        # TODO: infinite recursion!!
         return self.fields.keys() + dir(self)
 
     def __eq__(self, other):
