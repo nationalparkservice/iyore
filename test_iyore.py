@@ -170,6 +170,53 @@ class TestMatchingAndQuerying:
 
         assert subset == correct
 
+class TestSorting:
+    @pytest.fixture(scope= "module", params= ["manual", "parsed"])
+    def datafiles_endpoint(self, request, makeTestTree):
+        if request.param == "manual":
+            return datafiles
+        else:
+            return iyore.Dataset(os.path.join(base, structureFile)).datafiles
+
+    def test_datafiles_sort_actually_sorts(self, makeTestTree, datafiles_endpoint):
+        correct = [u'TestTree/static one/dir_A/MURI_1_A.txt', u'TestTree/static one/dir_A/MURI_2_A.txt', u'TestTree/static one/dir_A/MURI_3_A.txt', u'TestTree/static one/dir_A/MURI_4_A.txt', u'TestTree/static one/dir_A/TETH_1_A.txt', u'TestTree/static one/dir_A/TETH_2_A.txt', u'TestTree/static one/dir_A/TETH_3_A.txt', u'TestTree/static one/dir_A/TETH_4_A.txt', u'TestTree/static one/dir_A/THRI_1_A.txt', u'TestTree/static one/dir_A/THRI_2_A.txt', u'TestTree/static one/dir_A/THRI_3_A.txt', u'TestTree/static one/dir_A/THRI_4_A.txt', u'TestTree/static one/dir_A/UPST_1_A.txt', u'TestTree/static one/dir_A/UPST_2_A.txt', u'TestTree/static one/dir_A/UPST_3_A.txt', u'TestTree/static one/dir_A/UPST_4_A.txt', u'TestTree/static one/dir_A/WOCR_1_A.txt', u'TestTree/static one/dir_A/WOCR_2_A.txt', u'TestTree/static one/dir_A/WOCR_3_A.txt', u'TestTree/static one/dir_A/WOCR_4_A.txt', u'TestTree/static one/dir_B/MURI_1_B.txt', u'TestTree/static one/dir_B/MURI_2_B.txt', u'TestTree/static one/dir_B/MURI_3_B.txt', u'TestTree/static one/dir_B/MURI_4_B.txt', u'TestTree/static one/dir_B/TETH_1_B.txt', u'TestTree/static one/dir_B/TETH_2_B.txt', u'TestTree/static one/dir_B/TETH_3_B.txt', u'TestTree/static one/dir_B/TETH_4_B.txt', u'TestTree/static one/dir_B/THRI_1_B.txt', u'TestTree/static one/dir_B/THRI_2_B.txt', u'TestTree/static one/dir_B/THRI_3_B.txt', u'TestTree/static one/dir_B/THRI_4_B.txt', u'TestTree/static one/dir_B/UPST_1_B.txt', u'TestTree/static one/dir_B/UPST_2_B.txt', u'TestTree/static one/dir_B/UPST_3_B.txt', u'TestTree/static one/dir_B/UPST_4_B.txt', u'TestTree/static one/dir_B/WOCR_1_B.txt', u'TestTree/static one/dir_B/WOCR_2_B.txt', u'TestTree/static one/dir_B/WOCR_3_B.txt', u'TestTree/static one/dir_B/WOCR_4_B.txt', u'TestTree/static one/dir_C/MURI_1_C.txt', u'TestTree/static one/dir_C/MURI_2_C.txt', u'TestTree/static one/dir_C/MURI_3_C.txt', u'TestTree/static one/dir_C/MURI_4_C.txt', u'TestTree/static one/dir_C/TETH_1_C.txt', u'TestTree/static one/dir_C/TETH_2_C.txt', u'TestTree/static one/dir_C/TETH_3_C.txt', u'TestTree/static one/dir_C/TETH_4_C.txt', u'TestTree/static one/dir_C/THRI_1_C.txt', u'TestTree/static one/dir_C/THRI_2_C.txt', u'TestTree/static one/dir_C/THRI_3_C.txt', u'TestTree/static one/dir_C/THRI_4_C.txt', u'TestTree/static one/dir_C/UPST_1_C.txt', u'TestTree/static one/dir_C/UPST_2_C.txt', u'TestTree/static one/dir_C/UPST_3_C.txt', u'TestTree/static one/dir_C/UPST_4_C.txt', u'TestTree/static one/dir_C/WOCR_1_C.txt', u'TestTree/static one/dir_C/WOCR_2_C.txt', u'TestTree/static one/dir_C/WOCR_3_C.txt', u'TestTree/static one/dir_C/WOCR_4_C.txt', u'TestTree/static one/dir_D/MURI_1_D.txt', u'TestTree/static one/dir_D/MURI_2_D.txt', u'TestTree/static one/dir_D/MURI_3_D.txt', u'TestTree/static one/dir_D/MURI_4_D.txt', u'TestTree/static one/dir_D/TETH_1_D.txt', u'TestTree/static one/dir_D/TETH_2_D.txt', u'TestTree/static one/dir_D/TETH_3_D.txt', u'TestTree/static one/dir_D/TETH_4_D.txt', u'TestTree/static one/dir_D/THRI_1_D.txt', u'TestTree/static one/dir_D/THRI_2_D.txt', u'TestTree/static one/dir_D/THRI_3_D.txt', u'TestTree/static one/dir_D/THRI_4_D.txt', u'TestTree/static one/dir_D/UPST_1_D.txt', u'TestTree/static one/dir_D/UPST_2_D.txt', u'TestTree/static one/dir_D/UPST_3_D.txt', u'TestTree/static one/dir_D/UPST_4_D.txt', u'TestTree/static one/dir_D/WOCR_1_D.txt', u'TestTree/static one/dir_D/WOCR_2_D.txt', u'TestTree/static one/dir_D/WOCR_3_D.txt', u'TestTree/static one/dir_D/WOCR_4_D.txt', u'TestTree/static one/dir_E/MURI_1_E.txt', u'TestTree/static one/dir_E/MURI_2_E.txt', u'TestTree/static one/dir_E/MURI_3_E.txt', u'TestTree/static one/dir_E/MURI_4_E.txt', u'TestTree/static one/dir_E/TETH_1_E.txt', u'TestTree/static one/dir_E/TETH_2_E.txt', u'TestTree/static one/dir_E/TETH_3_E.txt', u'TestTree/static one/dir_E/TETH_4_E.txt', u'TestTree/static one/dir_E/THRI_1_E.txt', u'TestTree/static one/dir_E/THRI_2_E.txt', u'TestTree/static one/dir_E/THRI_3_E.txt', u'TestTree/static one/dir_E/THRI_4_E.txt', u'TestTree/static one/dir_E/UPST_1_E.txt', u'TestTree/static one/dir_E/UPST_2_E.txt', u'TestTree/static one/dir_E/UPST_3_E.txt', u'TestTree/static one/dir_E/UPST_4_E.txt', u'TestTree/static one/dir_E/WOCR_1_E.txt', u'TestTree/static one/dir_E/WOCR_2_E.txt', u'TestTree/static one/dir_E/WOCR_3_E.txt', u'TestTree/static one/dir_E/WOCR_4_E.txt']
+        result = datafiles_endpoint(sort= lambda e: e.path)
+
+        assert list(result) == correct
+
+    def test_datafiles_sort_func_by_path(self, makeTestTree, datafiles_endpoint):
+        keyfunc = lambda e: e.path
+        correct = sorted(datafiles_endpoint(), key= keyfunc)
+        result = list(datafiles_endpoint(sort= keyfunc))
+
+        assert result == correct
+
+    def test_datafiles_sort_func_by_num(self, makeTestTree, datafiles_endpoint):
+        keyfunc = lambda e: e.num
+        correct = sorted(datafiles_endpoint(), key= keyfunc)
+        result = list(datafiles_endpoint(sort= keyfunc))
+
+        assert result == correct
+
+    def test_datafiles_sort_string_by_num(self, makeTestTree, datafiles_endpoint):
+        correct = sorted(datafiles_endpoint(), key= lambda e: e.num)
+        result = list(datafiles_endpoint(sort= "num"))
+
+        assert result == correct
+
+    def test_datafiles_sort_strings_by_char_num(self, makeTestTree, datafiles_endpoint):
+        correct = sorted(datafiles_endpoint(), key= lambda e: (e.char, e.num))
+        result = list(datafiles_endpoint(sort= ("char", "num")))
+
+        assert result == correct
+
+    def test_datafiles_subset_sort_strings_by_char_num(self, makeTestTree, datafiles_endpoint):
+        params = {"num": ["2", "4"], "char": list("ACD")}
+
+        correct = sorted(datafiles_endpoint(**params), key= lambda e: (e.char, e.num))
+        result = list(datafiles_endpoint(sort= ("char", "num"), **params))
+
+        assert result == correct
 
 class TestStructureFileParsing:
     @staticmethod

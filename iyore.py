@@ -13,6 +13,7 @@ import itertools
 import operator
 import inspect
 import traceback
+import heapq
 
 ## TODO overall:
 
@@ -29,7 +30,7 @@ import traceback
 structureFileName = ".structure.txt"
 
 class Dataset(object):
-    # TODO: dict-like?
+    # TODO: dict-like?  --> sort of---just __getitem__
     def __init__(self, path, structure= None):
         if structure is None:
             # TODO: smarter finding structure file
@@ -159,15 +160,38 @@ class Endpoint(object):
         self.parts = parts if isinstance(parts[0], Pattern) else list(map(Pattern, parts))
         self.fields = set.union( *(set(part.fields) for part in self.parts) )
 
-    def __call__(self, **params):
-        matches = self._match(self.base, self.parts, params)
+    def __call__(self, sort= None, **params):
+        if sort is not None:
+            # singleton string (entry attr to sort on)
+            if isinstance(sort, basestring):
+                sortFunc = operator.attrgetter(sort)
+            # function (entry -> orderable type)
+            elif hasattr(sort, "__call__"):
+                sortFunc = sort
+            # iterable of strings
+            else:
+                try:
+                    iter(sort)
+                except TypeError:
+                    raise TypeError("Sort key must be a singleton string, iterable of strings, or function; instead got non-iterable type {}".format(type(sort)))
+                if all(isinstance(key, basestring) for key in sort):
+                    sortFunc = lambda e: tuple(getattr(e, key) for key in sort)
+                else:
+                    raise TypeError("When an iterable of sort keys are given, all must be strings")
+            
+            # sorting is not at all intelligent or particularly efficeint. TODO: any way to sort while traversing without knowing contents of subdirs?
+            matches = self._match(self.base, self.parts, params)
+            matches = sorted(matches, key= sortFunc)
+
+        else:
+            matches = self._match(self.base, self.parts, params)
+
         return Subset(matches)
 
     def _match(self, baseEntry, partsPatterns, params):
         # TODO: what about multiple leaf patterns?
         # TODO: error handling
         # TODO eventually: before anything else, check baseEntry for a definition file and potentially load a new partsPatterns from it
-        # TODO: sortedness?
         pattern, rest = partsPatterns[0], partsPatterns[1:]
 
         if pattern.isLiteral:
