@@ -161,6 +161,10 @@ class Endpoint(object):
         self.fields = set.union( *(set(part.fields) for part in self.parts) )
 
     def __call__(self, sort= None, **params):
+        for param in params:
+            if param not in self.fields:
+                raise TypeError('"{}" is not a field in this Endpoint'.format(param))
+
         if sort is not None:
             # singleton string (entry attr to sort on)
             if isinstance(sort, basestring):

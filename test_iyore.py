@@ -152,6 +152,10 @@ class TestMatchingAndQuerying:
         with pytest.raises(TypeError):
             set(entry.path for entry in datafiles_endpoint(name= False))
 
+    def test_datafiles_nonexisting_field(self, makeTestTree, datafiles_endpoint):
+        with pytest.raises(TypeError):
+            set(entry.path for entry in datafiles_endpoint(character= "pooh"))
+
     @pytest.fixture(scope= "module")
     def all_sitedocs(makeTestTree):
         return set(siteDocs())
