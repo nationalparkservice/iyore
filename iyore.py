@@ -17,15 +17,16 @@ import heapq
 
 ## TODO overall:
 
-## 1. 2-3 compatibility
-## 2. Error handling
-## 3. Docstrings & cleanup
-## 4. Unit tests? (both 2 and 3)
-## 5. Hierarchy file
-## 6. Parsers
+## [ ] Multiple sets of parameters (so can specify site+year, site+year)---a list of parameter dicts
+## [x] 2-3 compatibility
+## [ ] Error handling
+## [ ] Docstrings & cleanup
+## [x] Unit tests? (both 2 and 3)
+## [x] Hierarchy file
 
-## 7. User-friendly pattern syntax
-## 8. Composable query syntax??
+## [ ] User-friendly pattern syntax
+## [-] Composable query syntax??
+## [-] Parsers
 
 structureFileName = ".structure.txt"
 
@@ -329,7 +330,7 @@ class Pattern(object):
                             continue
 
                         ## Singletons
-                        if isinstance(restriction, str):
+                        if isinstance(restriction, basestring):
                             if value == restriction:
                                 continue
                             else:
@@ -458,7 +459,7 @@ class Entry(object):
     def __eq__(self, other):
         if isinstance(other, Entry):
             return self.path == other.path
-        elif isinstance(other, str):
+        elif isinstance(other, basestring):
             return other == self.path
         else:
             return False
@@ -466,7 +467,7 @@ class Entry(object):
     def __lt__(self, other):
         if isinstance(other, Entry):
             return self.path < other.path
-        elif isinstance(other, str):
+        elif isinstance(other, basestring):
             return other < self.path
         else:
             return False
@@ -474,7 +475,7 @@ class Entry(object):
     def __gt__(self, other):
         if isinstance(other, Entry):
             return self.path > other.path
-        elif isinstance(other, str):
+        elif isinstance(other, basestring):
             return other > self.path
         else:
             return False
@@ -482,7 +483,7 @@ class Entry(object):
     def __ge__(self, other):
         if isinstance(other, Entry):
             return self.path >= other.path
-        elif isinstance(other, str):
+        elif isinstance(other, basestring):
             return other >= self.path
         else:
             return False
@@ -490,7 +491,7 @@ class Entry(object):
     def __le__(self, other):
         if isinstance(other, Entry):
             return self.path <= other.path
-        elif isinstance(other, str):
+        elif isinstance(other, basestring):
             return other <= self.path
         else:
             return False
