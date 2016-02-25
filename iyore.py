@@ -2,6 +2,7 @@
 from __future__ import print_function, division, unicode_literals, absolute_import
 from builtins import (bytes, str, int, dict, object, range, map, filter, zip, round, pow, open)
 from future.utils import (iteritems, itervalues)
+from past.builtins import basestring
 
 import re
 import os
