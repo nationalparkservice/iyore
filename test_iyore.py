@@ -320,6 +320,41 @@ ANALYSIS
         with pytest.raises(ValueError):
             ds = iyore.Dataset(os.path.join(str(tmpdir), "simple.txt"))
 
+class TestInteractions:
+    @pytest.fixture(scope= "module")
+    def dataset(self):
+        return iyore.Dataset(os.path.join(base, structureFile))
+
+    def test_dataset_attr_access_to_endpoint(self, dataset):
+        datafiles_endpoint = dataset.endpoints["datafiles"]
+        assert dataset.datafiles is datafiles_endpoint
+
+    def test_dataset_getitem_access_to_endpoint(self, dataset):
+        datafiles_endpoint = dataset.endpoints["datafiles"]
+        assert dataset["datafiles"] is datafiles_endpoint
+
+    def test_dataset_dir(self, dataset):
+        dsdir = set(dir(dataset))
+        endpoints = set(dataset.endpoints.keys())
+        assert endpoints.issubset(dsdir)
+
+    def test_entry_attr_access(self, dataset):
+        res = dataset.basic()
+        entry = next(iter(res))
+        assert entry.char == entry.fields["char"]
+
+    def test_entry_dict_access(self, dataset):
+        res = dataset.basic()
+        entry = next(iter(res))
+        assert entry["char"] == entry.fields["char"]
+
+    def test_entry_dir(self, dataset):
+        res = dataset.basic()
+        entry = next(iter(res))
+        edir = set(dir(entry))
+        fields = set(entry.fields.keys())
+        fields.add("path")
+        assert fields.issubset(edir)
 
 if __name__ == '__main__':
     makeTestTree(None)

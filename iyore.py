@@ -19,11 +19,17 @@ import heapq
 ## TODO overall:
 
 ## [ ] Multiple sets of parameters (so can specify site+year, site+year)---a list of parameter dicts
+## [ ] Combining datasets/endpoints
 ## [x] 2-3 compatibility
 ## [ ] Error handling
 ## [ ] Docstrings & cleanup
 ## [x] Unit tests? (both 2 and 3)
 ## [x] Hierarchy file
+## [ ] Block reserved terms in structure file
+## [ ] Conversion for numerics
+## [ ] Smarter finding of structure file
+
+## Big leaps:
 
 ## [ ] User-friendly pattern syntax
 ## [-] Composable query syntax??
@@ -32,7 +38,6 @@ import heapq
 structureFileName = ".structure.txt"
 
 class Dataset(object):
-    # TODO: dict-like?  --> sort of---just __getitem__
     def __init__(self, path, structure= None):
         if structure is None:
             # TODO: smarter finding structure file
@@ -54,9 +59,16 @@ class Dataset(object):
             except KeyError:
                 raise AttributeError("Dataset instance has no endpoint or attribute '{}'".format(attr))
 
+    def __getitem__(self, item):
+        try:
+            return self.endpoints[item]
+        except KeyError:
+            raise KeyError("Dataset instance has no endpoint '{}'".format(item))
+
     def __dir__(self):
-        # TODO: infinite recursion!!
-        return self.endpoints.keys() + dir(self)
+        mydir = dir(self.__class__)
+        mydir.extend(self.endpoints.keys())
+        return mydir
 
     def __repr__(self):
         return 'Dataset("{}")\nEndpoints:\n{}'.format(self.base.path, "\n".join("  - {}: {}".format(name, repr(endpoint)) for name, endpoint in iteritems(self.endpoints)))
@@ -82,7 +94,7 @@ class Dataset(object):
             # TODO: comments
             # TODO: more descriptive errors?
             # TODO: show neighboring lines and highlight error
-            # TODO: ensure endpoint names are valid Python identifiers
+            # TODO: ensure endpoint names are valid Python identifiers, and don't conflict with iyore terms (path)
 
             for linenum, line in enumerate(f):
                 # split indentation and content
@@ -159,7 +171,7 @@ class Endpoint(object):
     def __init__(self, parts, base):
         # TODO: hold dataset instead of base?
         self.base = base if isinstance(base, Entry) else Entry(base)
-        self.parts = parts if isinstance(parts[0], Pattern) else list(map(Pattern, parts))
+        self.parts = parts if all(isinstance(part, Pattern) for part in parts) else list(map(Pattern, parts))
         self.fields = set.union( *(set(part.fields) for part in self.parts) )
 
     def __call__(self, sort= None, **params):
@@ -454,8 +466,10 @@ class Entry(object):
         self.fields[item] = val
 
     def __dir__(self):
-        # TODO: infinite recursion!!
-        return self.fields.keys() + dir(self)
+        mydir = dir(self.__class__)
+        mydir.extend(self.fields.keys())
+        mydir.append("path")
+        return mydir
 
     def __eq__(self, other):
         if isinstance(other, Entry):
