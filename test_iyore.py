@@ -222,6 +222,105 @@ class TestSorting:
 
         assert result == correct
 
+class TestFillingWithLiterals:
+    @pytest.fixture(scope= "module", params= ["manual", "parsed"])
+    def datafiles_endpoint(self, request, makeTestTree):
+        if request.param == "manual":
+            return datafiles
+        else:
+            return iyore.Dataset(os.path.join(base, structureFile)).datafiles
+
+    def test_isLiteral(self):
+        assert iyore.Pattern(r"  asdf123-sdf _!@#%&").isLiteral
+        assert iyore.Pattern(r"").isLiteral
+        assert not iyore.Pattern("data *").isLiteral
+        assert not iyore.Pattern(r"test\.txt").isLiteral
+        assert not iyore.Pattern(r"item (?P<grp>\d{3})").isLiteral
+
+    def test_filling_literal_is_unchanged(self):
+        literal_pattern = iyore.Pattern("this is a literal pattern with 8 words!")
+        assert literal_pattern.isLiteral
+        filled = literal_pattern.fill({})
+        assert filled.value == literal_pattern.value
+
+    def test_filling_no_named_groups_is_unchanged(self):
+        pattern = iyore.Pattern(r"(\w+)\s+: ((\d{1-5})\.(\d+))")
+        filled = pattern.fill({})
+        assert filled.value == pattern.value
+
+    def test_filling_basic_named_group(self):
+        pattern = iyore.Pattern(r"(?P<word_one>\w+) cat [d|fr]og")
+        filled = pattern.fill({"word_one": "orangutan"})
+        assert filled.value == r"orangutan cat [d|fr]og"
+
+    def test_filling_named_group_spans_whole_pattern(self):
+        pattern = iyore.Pattern(r"(?P<thing>\d+ \w+)")
+        filled = pattern.fill({"thing": "22 blue"})
+        assert filled.value == "22 blue"
+        assert filled.isLiteral
+
+    def test_filling_multiple_named_groups(self):
+        pattern = iyore.Pattern(r"uses (?P<desc>\d+ \w+) (?P<thing>\w+)s for (?P<num>\d+) (?P<use>.+)")
+        filled = pattern.fill({
+            "desc": "8 sizeable",
+            "thing": "lozenge",
+            "num": "4",
+            "use":"parties and general throat healing"
+            })
+        assert filled.value == r"uses 8 sizeable lozenges for 4 parties and general throat healing"
+
+    def test_escaping_filled_literals(self):
+        pattern = iyore.Pattern(r"I said, (?P<statement>.+)")
+        statement = r'"Golly, what many of you! Hark, where is your milkman? (I must give\pay him $$ [*quickly!*])"'
+        filled = pattern.fill({"statement": statement})
+        assert filled.matches("I said, "+statement) == {"statement": statement}
+
+    @pytest.mark.xfail
+    def test_filling_inner_nested_named_group(self):
+        pattern = iyore.Pattern(r"(?P<outer>song_(?P<song_name>.+))\.mp3")
+        filled = pattern.fill({"song_name": "close_ur_2_eyes"})
+        assert filled.matches("song_close_ur_2_eyes.mp3") == {"song_name": "close_ur_2_eyes", "outer": "song_close_ur_2_eyes"}
+
+    @pytest.mark.xfail
+    def test_filling_outer_nested_named_group(self):
+        pattern = iyore.Pattern(r"(?P<outer>song_(?P<song_name>.+))\.mp3")
+        filled = pattern.fill({"outer": "song_gimmie_shelter"})
+        assert filled.matches("song_gimmie_shelter.mp3") == {"outer": "song_gimmie_shelter", "song_name": "gimmie_shelter"}
+
+    def test_catches_nonexistant_field(self):
+        pattern = iyore.Pattern(r"map (?P<number>\d) for client (?P<client>.+)")
+        with pytest.raises(ValueError):
+            pattern.fill({"client": "Alfred P. Sloan", "account": "200120"})
+
+    def test_catches_malformatted_literal(self):
+        pattern = iyore.Pattern(r"(?P<bird>[\w|\s]+) call #(?P<num>\d+)\.mp3")
+        with pytest.raises(ValueError):
+            pattern.fill({"bird": "Blue-eyed penguin", "num": "03"})
+
+    def test_filled_results_all_literals(self, datafiles_endpoint):
+        params = {
+            "char": "B",
+            "name": "MURI",
+            "num": "3"
+        }
+        filled_results = list(datafiles_endpoint(**params))
+        actual_results = list(datafiles_endpoint(**{param: [value] for param, value in params.items()}))
+        assert len(filled_results) == len(actual_results) == 1
+        assert filled_results[0] == actual_results[0]
+        assert filled_results[0].fields == actual_results[0].fields
+
+    def test_filled_results_some_literals(self, datafiles_endpoint):
+        params = {
+            "char": "B",
+            "num": "3"
+        }
+        filled_results = { entry.path: entry for entry in datafiles_endpoint(**params) }
+        actual_results = { entry.path: entry for entry in datafiles_endpoint(**{param: [value] for param, value in params.items()}) }
+        assert len(filled_results) == len(actual_results)
+        for path, actual in actual_results.items():
+            filled = filled_results[path]
+            assert filled.fields == actual.fields
+
 class TestStructureFileParsing:
     @staticmethod
     def assert_simple_structure(ds):

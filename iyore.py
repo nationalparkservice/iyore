@@ -175,9 +175,20 @@ class Endpoint(object):
         self.fields = set.union( *(set(part.fields) for part in self.parts) )
 
     def __call__(self, sort= None, **params):
-        for param in params:
+        literal_fill_fields = {}
+        for param, value in iteritems(params):
             if param not in self.fields:
                 raise TypeError('"{}" is not a field in this Endpoint'.format(param))
+            else:
+                if Pattern.isLiteral(value):
+                    literal_fill_fields[param] = value
+
+        if len(literal_fill_fields) > 0:
+            # for fields where a literal (singleton string) restriction is given, optimize search process by replacing the regex with the literal value
+            parts = [ part.fill({field: val for field, val in iteritems(literal_fill_fields) if field in part.fields}) for part in self.parts ]
+        else:
+            parts = self.parts
+
 
         if sort is not None:
             # singleton string (entry attr to sort on)
@@ -198,11 +209,11 @@ class Endpoint(object):
                     raise TypeError("When an iterable of sort keys are given, all must be strings")
             
             # sorting is not at all intelligent or particularly efficeint. TODO: any way to sort while traversing without knowing contents of subdirs?
-            matches = self._match(self.base, self.parts, params)
+            matches = self._match(self.base, parts, params)
             matches = sorted(matches, key= sortFunc)
 
         else:
-            matches = self._match(self.base, self.parts, params)
+            matches = self._match(self.base, parts, params)
 
         return Subset(matches)
 
@@ -314,22 +325,111 @@ class Pattern(object):
     # isLiteral: bool
 
     # TODO: should pattern be explicitly full-line, ie insert ^ and $ ?
-    def __init__(self, pattern):
+    def __init__(self, pattern, literals= {}):
         self.value = pattern
         try:
             self.regex = re.compile(pattern)
         except re.error as e:
             raise ValueError("Regex syntax error in pattern '{}': {}".format(pattern, e.args[0]))
-        self.fields = tuple(self.regex.groupindex.keys())
-        self.isLiteral = not any(char in pattern for char in r"\\*+?|[](){}^$")  # hack-y way to check if pattern is a literal string, not a regex
+        self.literals = literals
+        self.fields = set(self.regex.groupindex.keys())
+        self.fields.update(literals.keys())
+        self.isLiteral = Pattern.isLiteral(pattern)
+        self.pattern_parts = self.named_group_positions = self.compiled_groups = None
+
+    def fill(self, fields):
+        if self.isLiteral:
+            return self
+        if self.pattern_parts is None:
+            self.pattern_parts, self.named_group_positions = Pattern.split_named_groups(self.value)
+            # compile each capturing group on its own to use for validating literal values:            
+            # extract matched pattern from each named group, wrap in ^ and $ (to make it a full-string match, as re.fullmatch is not in py2)
+            self.compiled_groups = { field: re.compile("^{}$".format( self.pattern_parts[pos][ len("(?P<>")+len(field):-1 ] )) for field, pos in iteritems(self.named_group_positions) }
+
+        new_parts = list(self.pattern_parts)
+        for field, literal_value in iteritems(fields):
+            # TODO: convert literal_value to str if necessary---any way to intelligently format number to format of regex??
+            try:
+                field_regex = self.compiled_groups[ field ]
+                field_index = self.named_group_positions[ field ]
+            except KeyError:
+                raise ValueError('The field "{}" does not exist in the pattern "{}"'.format(field, self.value))
+            # ensure the given literal value actually matches its field's pattern
+            if not field_regex.match(literal_value):
+                raise ValueError('"{}" does not match the pattern for the field "{}" (must match the regular expression "{}")'.format(literal_value, field, field_regex.pattern))
+            
+            new_parts[field_index] = Pattern.escape(literal_value)
+
+        return Pattern("".join(new_parts), literals= fields)
+
+    @staticmethod
+    def isLiteral(pattern):
+        return isinstance(pattern, basestring) and not any(char in pattern for char in r"\\.*+?|[](){}^$")  # hack-y way to check if pattern is a literal string, not a regex
+
+    @staticmethod
+    def escape(literal):
+        # a less-agressive version of re.escape that only escapes known regex special characters
+        return re.sub(r"[.\\+*?^$\[\]{}()|/]", r"\\\g<0>", literal)
+
+    @staticmethod
+    def split_named_groups(regex_string):
+        # returns tuple of (regex pattern parts, split into list by named group; dict of { group name: index in that list } )
+        # assumes regex_string is valid regex, and all parens are matched!
+        named_groups = [(match.group(1), match.start()) for match in re.finditer(r"\(\?P<(\w+)>", regex_string)]
+
+        if len(named_groups) == 0:
+            return ([regex_string], {})
+
+        pattern_parts = []
+        named_group_positions = {}
+
+        str_list = list(regex_string)  # __getitem__ access is slightly faster from a list than a string
+        i = 0
+        for group_name, group_start in named_groups:
+            # add any non-grouped regex between the end of the last group and the start of this one
+            if group_start > i:
+                pattern_parts.append( regex_string[i:group_start] )
+            if group_start < i:
+                raise NotImplementedError("iyore does not currently handle filling literals into nested named groups")
+            i = group_start
+            paren_depth = 0
+            have_backslash = False
+            try:
+                while True:
+                    if not have_backslash:
+                        char = str_list[i]
+                        if char == "(":
+                            paren_depth += 1
+                        elif char == ")":
+                            paren_depth -= 1
+                        elif char == "\\":
+                            have_backslash = True
+                        if paren_depth == 0:
+                            i = i+1
+                            break
+                    else:
+                        have_backslash = False
+                    i += 1
+            except IndexError:
+                raise ValueError("The string '{}' seems to be an improperly-formatted regex, with mismatched parens".format(regex_string))
+                
+            pattern_parts.append( regex_string[group_start:i] )
+            named_group_positions[group_name] = len(pattern_parts)-1
+
+        if i < len(str_list):
+            pattern_parts.append( regex_string[i:len(str_list)] )
+
+        return pattern_parts, named_group_positions
+
 
     def matches(self, string, **params):
         if self.isLiteral:
-            return {} if self.value == string else None
+            return self.literals if self.value == string else None
         else:
             match = self.regex.match(string)
             if match is not None:
                 groups = match.groupdict()
+                groups.update(self.literals)
                 for field, restriction in iteritems(params):
                     if field in groups:
                         value = groups[field]
@@ -408,6 +508,9 @@ class Pattern(object):
                 return groups
             else:
                 return None
+
+    def __repr__(self):
+        return 'Pattern("{}")'.format(self.value)
 
 
 class Entry(object):
