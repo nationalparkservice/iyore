@@ -18,7 +18,7 @@ import heapq
 
 ## TODO overall:
 
-## [ ] Multiple sets of parameters (so can specify site+year, site+year)---a list of parameter dicts
+## [x] Multiple sets of parameters (so can specify site+year, site+year)---a list of parameter dicts
 ## [ ] Combining datasets/endpoints
 ## [x] 2-3 compatibility
 ## [ ] Error handling
@@ -28,6 +28,7 @@ import heapq
 ## [ ] Block reserved terms in structure file
 ## [ ] Conversion for numerics
 ## [ ] Smarter finding of structure file
+## [ ] Further optimize Pattern.fill() (or .match()) to detect when regex only contains escaped chars, and jump directly to path without searching
 
 ## Big leaps:
 
@@ -174,7 +175,7 @@ class Endpoint(object):
         self.parts = parts if all(isinstance(part, Pattern) for part in parts) else list(map(Pattern, parts))
         self.fields = set.union( *(set(part.fields) for part in self.parts) )
 
-    def __call__(self, sort= None, **params):
+    def __call__(self, items= None, sort= None, **params):
         literal_fill_fields = {}
         for param, value in iteritems(params):
             if param not in self.fields:
@@ -185,11 +186,34 @@ class Endpoint(object):
 
         if len(literal_fill_fields) > 0:
             # for fields where a literal (singleton string) restriction is given, optimize search process by replacing the regex with the literal value
-            parts = [ part.fill({field: val for field, val in iteritems(literal_fill_fields) if field in part.fields}) for part in self.parts ]
+            parts = [ part.fill(literal_fill_fields, raise_on_nonexistant_fields= False) for part in self.parts ]
+            # parts = [ part.fill({field: val for field, val in iteritems(literal_fill_fields) if field in part.fields}) for part in self.parts ]
         else:
             parts = self.parts
 
+        if items is not None:
+            if len(params) > 0:
 
+                def items_plus_params():
+                    try:
+                        for item_dict in items:
+                            try:
+                                extended = item_dict.copy()
+                                extended.update(params)
+                            except TypeError:
+                                raise TypeError("'items' must be an iterable of dict-like objects, instead got iterable containing a non-dict-like type {}".format(type(item_dict)))
+                            yield extended
+                    except TypeError:
+                        raise TypeError("'items' must be an iterable of dict-like objects, instead got non-iterable type {}".format(type(items)))
+
+
+                matches = self._select(items_plus_params())
+            else:
+                matches = self._select(items)
+
+        else:
+            matches = self._match(self.base, parts, params)
+            
         if sort is not None:
             # singleton string (entry attr to sort on)
             if isinstance(sort, basestring):
@@ -209,11 +233,7 @@ class Endpoint(object):
                     raise TypeError("When an iterable of sort keys are given, all must be strings")
             
             # sorting is not at all intelligent or particularly efficeint. TODO: any way to sort while traversing without knowing contents of subdirs?
-            matches = self._match(self.base, parts, params)
             matches = sorted(matches, key= sortFunc)
-
-        else:
-            matches = self._match(self.base, parts, params)
 
         return Subset(matches)
 
@@ -242,6 +262,27 @@ class Endpoint(object):
                     else:
                         for entry in self._match(here, rest, params):
                             yield entry
+
+    def _select(self, items):
+        # items: list of parameter dictionaries
+        # i.e. list of dicts, where each dict is equivalent to kwards you'd give to __call__
+        # effectively, parameters inside each dict are ANDed together, then all those parameter sets are ORed
+        try:
+            iter(items)
+        except TypeError:
+            raise TypeError("'items' must be an iterable of dict-like objects, instead got non-iterable type {}".format(type(items)))
+
+        for item_dict in items:
+            try:
+                # TODO: attempt to fast-path the case of all dicts in iterable giving literal values for the same set of fields
+                # by skipping the isLiteral check and using the previous dict's literal_fill_fields keys
+                literal_fill_fields = { field: value for field, value in iteritems(item_dict) if Pattern.isLiteral(value) }
+            except TypeError:
+                raise TypeError("'items' must be an iterable of dict-like objects, instead got iterable containing a non-dict-like type {}".format(type(item_dict)))
+            
+            parts = [ part.fill(literal_fill_fields, raise_on_nonexistant_fields= False) for part in self.parts ]
+            for entry in self._match(self.base, parts, item_dict):
+                yield entry
 
     def __repr__(self):
         return "Endpoint('{}'), fields: {}".format([part.value for part in self.parts],
@@ -337,7 +378,7 @@ class Pattern(object):
         self.isLiteral = Pattern.isLiteral(pattern)
         self.pattern_parts = self.named_group_positions = self.compiled_groups = None
 
-    def fill(self, fields):
+    def fill(self, fields, raise_on_nonexistant_fields= True):
         if self.isLiteral:
             return self
         if self.pattern_parts is None:
@@ -353,7 +394,10 @@ class Pattern(object):
                 field_regex = self.compiled_groups[ field ]
                 field_index = self.named_group_positions[ field ]
             except KeyError:
-                raise ValueError('The field "{}" does not exist in the pattern "{}"'.format(field, self.value))
+                if raise_on_nonexistant_fields:
+                    raise ValueError('The field "{}" does not exist in the pattern "{}"'.format(field, self.value))
+                else:
+                    continue
             # ensure the given literal value actually matches its field's pattern
             if not field_regex.match(literal_value):
                 raise ValueError('"{}" does not match the pattern for the field "{}" (must match the regular expression "{}")'.format(literal_value, field, field_regex.pattern))
@@ -521,8 +565,9 @@ class Entry(object):
     # ._join(path, dict of fields) -> new Entry with path joined to this and fields extended
     # ._exists()
     # ._listdir()
-    # TODO: dict-like?
-    # TODO: open()
+
+    # TODO: make Entry a fully-compatible Mapping type to allow ** expansion
+
     def open(self, mode='r', buffering=-1, encoding=None, errors=None, newline=None):
         return open(self.path, mode= mode, buffering= buffering, encoding= encoding, errors= errors, newline= newline)
 
@@ -540,6 +585,9 @@ class Entry(object):
         return os.path.exists(self.path)
     def _listdir(self):
         return os.listdir(self.path)
+
+    def iteritems(self):
+        return iteritems(self.fields)
 
     def __getattr__(self, attr):
         try:

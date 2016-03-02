@@ -174,6 +174,8 @@ class TestMatchingAndQuerying:
 
         assert subset == correct
 
+## TODO: TestItemSelection
+
 class TestSorting:
     @pytest.fixture(scope= "module", params= ["manual", "parsed"])
     def datafiles_endpoint(self, request, makeTestTree):
