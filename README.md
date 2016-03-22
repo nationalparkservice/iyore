@@ -17,6 +17,8 @@ you write a file of regular expressions describing each level of your directory
 structure, it gives you iterators over each distinct kind of data it contains,
 plus lets you subset the data based on patterns in the file and folder names.
 
+## Structuring
+
 Say you have a folder structure like this:
 ```
 Winnie The Pooh Data
@@ -81,7 +83,7 @@ pattern for a file or folder with `<endpoint_name>` and a colon. (Note that
 This structure file should be saved in the root directory of your dataset---in
 this case, as `Winnie The Pooh Data/.structure.txt`.
 
-------------------------------------------------------------------
+## Iterating
 
 Now, to start accessing your data in Python:
 
@@ -138,6 +140,8 @@ From here, you can use the `Entry`s for data processing:
 ...     do_complex_sentiment_analysis_algorithm(quotes)
 ```
 
+## Filtering
+
 What if you don't want all quotes, but just quotes from Piglet from the first three chapters?
 
 When calling an `Endpoint` to iterate through it, you can give keyword arguments
@@ -153,13 +157,87 @@ to restrict the values allowed in each field:
 
 Here are the different types of arguments you can give to restrict the values for a field:
 
- Argument  |                                       Meaning
----------- | ---------------------------------------------------------------------------------------------
- `str`     |  value must equal this string
- number    |  value, parsed as a float, must equal this number
- `dict`    |  keys are values to *exclude*, must all map to `False`. Any values not in dict are accepted
- iterable  |  value must be in iterable
- callable  |  `callable(value)` must return True
+ Argument          |                                   Meaning, for each Entry
+------------------ | ---------------------------------------------------------------------------------------------------
+ `str`             |  field's value must equal this string
+ number            |  field's value, parsed as a float, must equal this number
+ `dict`            |  keys are field values to *exclude*, must all map to `False`. Any values not in dict are accepted.
+ iterable of `str` |  field's value must be in iterable
+ callable          |  `callable(field's value)` must return True
+
+## Sorting
+
+To access your data in a particular order, use the `sort` keyword argument.
+
+Argument type           |                     Meaning for `sort`
+----------------------- | ---------------------------------------------------------------------------------------
+field name (`str`)      | sort by that field
+iterable of field names | sort by those fields: first field 1, then within same values for field 1, field 2, etc.
+function                | key function which, given an Entry, returns a value to represent that Entry when sorting
+
+For example, to iterate through all the quotes, but ordered (alphabetically) by character:
+
+```python
+>>> for entry in ds.quotes(sort= "character"):
+...     print(entry.character, ":", entry.chap_title)
+...
+piglet : In Which Pooh Goes Visiting and Gets into a Tight Place
+piglet : In Which Pooh and Piglet Go Hunting and Nearly Catch a Woozle
+piglet : In Which Piglet is Entirely Surrounded by Water
+piglet : In Which Christopher Robin Gives Pooh a Party and We Say Goodbye
+pooh : In Which We Are Introduced
+pooh : In Which Pooh Goes Visiting and Gets into a Tight Place
+pooh : In Which Pooh and Piglet Go Hunting and Nearly Catch a Woozle
+    ...
+```
+
+Unless you specify an ordering with `sort`, don't expect your results to always be alphabetical, or to appear in the
+same order they do in your file browser.
+
+## Accessing specific entries
+
+Occasionally, you already know exactly which Entries you want.
+
+Say you need Pooh quotes from Chapter 1, Piglet quotes from Chapter 2, and all quotes from Chapter 10.
+
+`ds.quotes(character= ["pooh", "piglet"], chap_num= ["01", "02", "10"])` is *not* specific enough here:
+that will give you quotes that match any combination of the specified characters and chapter numbers. For example, you'll
+also get Pooh quotes from Chapter 2, along with just the Piglet quotes you wanted.
+
+You *could* phrase this as four separate queries:
+
+```python
+>>> ds.quotes(character= "pooh", chap_num= 1)
+>>> ds.quotes(character= "piglet", chap_num= 2)
+>>> ds.quotes(chap_num= 10)
+```
+
+but it's easier to use the `items` keyword argument, which takes a list of `dict`s,
+where each `dict` contains the keyword arguments you'd use for each of those queries.
+
+```python
+>>> specific_quotes = [
+...     {
+...         "character": "Pooh",
+...         "chap_num": 1
+...     },
+...     {
+...         "character": "Piglet",
+...         "chap_num": 2
+...     },
+...     {
+...         "chap_num": 10
+...     }
+... ]
+>>> for entry in ds.quotes(items= specific_quotes):
+...     print(entry.chap_num, entry.character, ":", entry.path)
+...
+01 pooh : Chapters/01 In Which We Are Introduced/pooh-quotes.txt
+02 piglet : Chapters/02 In Which Pooh Goes Visiting and Gets into a Tight Place/piglet-quotes.txt
+10 pooh : Chapters/10 In Which Christopher Robin Gives Pooh a Party and We Say Goodbye/pooh-quotes.txt
+10 piglet : Chapters/10 In Which Christopher Robin Gives Pooh a Party and We Say Goodbye/piglet-quotes.txt
+10 tigger : Chapters/10 In Which Christopher Robin Gives Pooh a Party and We Say Goodbye/tigger-quotes.txt
+```
 
 ------------
 
