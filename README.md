@@ -87,7 +87,7 @@ this case, as `Winnie The Pooh Data/.structure.txt`.
 
 Now, to start accessing your data in Python:
 
-```python
+```pycon
 >>> import iyore
 >>> ds = iyore.Dataset("~/fun/Winnie The Pooh Data/.structure.txt")
 >>> ds
@@ -102,7 +102,7 @@ attributes for each of the `Endpoint`s in that structure file.
 
 Let's look at all of the quotes in this dataset:
 
-```python
+```pycon
 >>> for entry in ds.quotes():
 ...     print(entry.path, ':::', entry.fields)
 ...
@@ -121,7 +121,7 @@ dataset. Besides the `path` attribute, an `Entry` also has a dictionary of
 `fields`. This contains the values matched by all the named capturing groups.
 For convenience, you can also access particular fields using dot notation:
 
-```python
+```pycon
 >>> for entry in ds.quotes():
 ...     print(entry.chap_num, entry.character)
 ...
@@ -134,7 +134,7 @@ For convenience, you can also access particular fields using dot notation:
 
 From here, you can use the `Entry`s for data processing:
 
-```python
+```pycon
 >>> for entry in ds.quotes():
 ...     quotes = open(str(entry)).readlines()   # note: str(entry) == entry.path
 ...     do_complex_sentiment_analysis_algorithm(quotes)
@@ -147,7 +147,7 @@ What if you don't want all quotes, but just quotes from Piglet from the first th
 When calling an `Endpoint` to iterate through it, you can give keyword arguments
 to restrict the values allowed in each field:
 
-```python
+```pycon
 >>> for entry in ds.quotes(character= "piglet", chap_num= ["01", "02", "03"]):
 ...     print(entry.chap_num, entry.character, ":", entry.path)
 ...
@@ -177,7 +177,7 @@ function                | key function which, given an Entry, returns a value to
 
 For example, to iterate through all the quotes, but ordered (alphabetically) by character:
 
-```python
+```pycon
 >>> for entry in ds.quotes(sort= "character"):
 ...     print(entry.character, ":", entry.chap_title)
 ...
@@ -206,7 +206,7 @@ also get Pooh quotes from Chapter 2, along with just the Piglet quotes you wante
 
 You *could* phrase this as four separate queries:
 
-```python
+```pycon
 >>> ds.quotes(character= "pooh", chap_num= 1)
 >>> ds.quotes(character= "piglet", chap_num= 2)
 >>> ds.quotes(chap_num= 10)
@@ -215,7 +215,7 @@ You *could* phrase this as four separate queries:
 but it's easier to use the `items` keyword argument, which takes a list of `dict`s,
 where each `dict` contains the keyword arguments you'd use for each of those queries.
 
-```python
+```pycon
 >>> specific_quotes = [
 ...     {
 ...         "character": "Pooh",
