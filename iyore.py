@@ -92,7 +92,6 @@ class Dataset(object):
         importLinePattern = re.compile(r"^(?:from\s+.+\s+)?(?:import\s+.+\s*)(?:as\s+.+\s*)?$")
         contentPattern = re.compile(r"(?:([A-z]\w*):\s?)?(.+)")     # groups: endpointName, endpointPattern
         with open(structfilePath, encoding= "utf-8") if structfilePath else io.StringIO(structfileString) as f:
-            # TODO: comments
             # TODO: more descriptive errors?
             # TODO: show neighboring lines and highlight error
             # TODO: ensure endpoint names are valid Python identifiers, and don't conflict with iyore terms (path)
@@ -110,7 +109,8 @@ class Dataset(object):
                     continue
 
                 if content[0] == "#":
-                    # allow comments
+                    # allow comments on their own line
+                    # TODO: allow inline comments
                     continue
                     
                 # split (possible) endpoint name, pattern

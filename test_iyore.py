@@ -379,6 +379,24 @@ ANALYSIS
         ds = iyore.Dataset(os.path.join(str(tmpdir), "simple.txt"))
         self.assert_simple_structure(ds)
 
+    def test_simple_structure_file_allow_comment_lines(self, tmpdir):
+        with open(os.path.join(str(tmpdir), "simple.txt"), "w", encoding= "utf-8") as f:
+            f.write("""
+# first line comment
+DATA
+    pics: Photos
+    # indented comment
+    sounds: sound
+        audio: recording.wav
+        #comment no preceding space
+
+ANALYSIS
+    srcid: SRCID.txt
+        #extra indented comment""")
+
+        ds = iyore.Dataset(os.path.join(str(tmpdir), "simple.txt"))
+        self.assert_simple_structure(ds)
+
     def test_simple_structure_file_catches_inconsistent_indent(self, tmpdir):
         with open(os.path.join(str(tmpdir), "simple.txt"), "w", encoding= "utf-8") as f:
             f.write("""DATA
