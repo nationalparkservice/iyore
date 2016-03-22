@@ -109,6 +109,10 @@ class Dataset(object):
                     # TODO: maybe only allow if ind == "" as well?
                     continue
 
+                if content[0] == "#":
+                    # allow comments
+                    continue
+                    
                 # split (possible) endpoint name, pattern
                 try:
                     name, pattern = contentPattern.match(content).groups()
