@@ -58,7 +58,7 @@ chapter. The names of the files and folders follow consistent patterns, but also
 contain essential metadata (which character the quotes are for, the chapter
 number, etc.).
 
-To easily access this data with iyore, we'd first write a structure file describing the dataset:
+To easily access this data with iyore, we'd first write a **structure file** describing the dataset:
 ```
 Chapters
     (?P<chap_num>\d\d) (?P<chap_title>.+)
@@ -68,14 +68,14 @@ Chapters
 
 Each line contains a regular expression that matches a file or folder name.
 Notice the named capturing groups, like `(?P<chap_num>\d\d) (?P<chap_title>.+)`.
-Labeling these fields in the name will allow us to subselect data from only
+Labeling these **fields** in the name will allow us to subselect data from only
 certain `chap_num`s or `chap_title`s. The indentation describes the folder
 structure: each subfolder or file is indented one level further than its parent.
 (Like Python, you can use tabs or spaces, so long as you're consistent with the
 indentation character and width.)
 
 The two kinds of data we actually want to access are `quotes` and `images`. We
-refer to these as `Endpoint`s, which are specified by prefixing the regex
+refer to these as **`Endpoint`s**, which are specified by prefixing the regex
 pattern for a file or folder with `<endpoint_name>` and a colon. (Note that
 `Endpoint`s could be folders as well as files, and there can be more folders or
 `Endpoint`s within them.)
@@ -97,7 +97,7 @@ Endpoints:
   - images: Endpoint(['Chapters','(?P<chap_num>\\d\\d) (?P<chap_title>.+)','(?P<title>.*).png']), fields: chap_num, chap_title, title
 ```
 
-A `Dataset` is created with the path to a structure file, and just has
+A **`Dataset`** is created with the path to a structure file, and just has
 attributes for each of the `Endpoint`s in that structure file.
 
 Let's look at all of the quotes in this dataset:
@@ -113,12 +113,12 @@ Chapters/02 In Which Pooh Goes Visiting and Gets into a Tight Place/tigger-quote
     ...
 ```
 
-`ds.quotes is an Endpoint: one kind of data you want. Calling ds.quotes()
-`returns an iterator through all quotes Entrys in the dataset.
+`ds.quotes` is an Endpoint: one kind of data you want. Calling `ds.quotes()`
+returns an iterator through all quotes Entrys in the dataset.
 
-An `Entry` (as in, a directory entry) is a single, concrete file or folder in a
+An **`Entry`** (as in, a directory entry) is a single, concrete file or folder in a
 dataset. Besides the `path` attribute, an `Entry` also has a dictionary of
-`fields`. This contains the values matched by all the named capturing groups.
+**`fields`**. This contains the values matched by all the named capturing groups.
 For convenience, you can also access particular fields using dot notation:
 
 ```pycon
@@ -155,7 +155,8 @@ to restrict the values allowed in each field:
 03 piglet : Chapters/03 In Which Pooh and Piglet Go Hunting and Nearly Catch a Woozle/piglet-quotes.txt
 ```
 
-Here are the different types of arguments you can give to restrict the values for a field:
+Here are the different types of arguments you can give to restrict the values for a field.
+These are referred to as **filters**:
 
  Argument          |                                   Meaning, for each Entry
 ------------------ | ---------------------------------------------------------------------------------------------------
