@@ -6,6 +6,7 @@ import shutil
 import re
 import random
 import math
+import string
 
 import iyore
 
@@ -229,6 +230,73 @@ class TestSorting:
         result = list(datafiles_endpoint(sort= ("char", "num"), **params))
 
         assert result == correct
+
+class TestLiteralEscapingAndUnescaping:
+    def test_isLiteralRegex_no_specials(self):
+        regex = "a sdf_456"
+        assert iyore.Pattern.isLiteralRegex(regex)
+
+    def test_isLiteralRegex_escaped_special(self):
+        regex = r"listen up\!"
+        assert iyore.Pattern.isLiteralRegex(regex)
+
+    def test_isLiteralRegex_multiple_escaped_special(self):
+        regex = r"p@y \$\$ 2 dance with the \*s\.exe"
+        assert iyore.Pattern.isLiteralRegex(regex)
+
+    def test_isLiteralRegex_single_backslash(self):
+        regex = r"here\\there"
+        assert iyore.Pattern.isLiteralRegex(regex)
+
+    def test_isLiteralRegex_multiple_backslash(self):
+        regex = r"here\\\\there"
+        assert iyore.Pattern.isLiteralRegex(regex)
+
+    def test_isLiteralRegex_catches_basics(self):
+        assert not iyore.Pattern.isLiteralRegex(r"I'm a *")
+        assert not iyore.Pattern.isLiteralRegex(r"space out: +")
+        assert not iyore.Pattern.isLiteralRegex(r"I have [0-5] legs")
+        assert not iyore.Pattern.isLiteralRegex(r"(The wheels on the bus go round and round){2,4}")
+
+    def test_isLiteralRegex_catches_char_classes(self):
+        assert not iyore.Pattern.isLiteralRegex(r"I ate \d pizzas")
+        assert not iyore.Pattern.isLiteralRegex(r"My name is \w+")
+        assert not iyore.Pattern.isLiteralRegex(r"The \w* is\s*\d+")
+        assert not iyore.Pattern.isLiteralRegex(r"I agree with the last guy: \1 is a good idea")
+
+    def test_escape_nothing(self):
+        assert iyore.Pattern.escape("asdf 234 g 5") == "asdf 234 g 5"
+
+    def test_escape_specials(self):
+        assert iyore.Pattern.escape("file.txt") == r"file\.txt"
+        assert iyore.Pattern.escape("list of *s") == r"list of \*s"
+
+    def test_escape_backslash(self):
+        assert iyore.Pattern.escape("best (or worst) things 2 do\see") == r"best \(or worst\) things 2 do\\see"
+
+    def test_escape_multiple_backslash(self):
+        assert iyore.Pattern.escape(r"a\\q") == r"a\\\\q"
+        assert iyore.Pattern.escape(r"a\\\q") == r"a\\\\\\q"
+
+    def test_unescape_nothing(self):
+        assert iyore.Pattern.escape("there are no regex tokens in this pattern") == "there are no regex tokens in this pattern"
+
+    def test_unescape_specials(self):
+        assert iyore.Pattern.unescape(r"file\.txt") == "file.txt"
+        assert iyore.Pattern.unescape(r"list of \*s") == "list of *s"
+
+    def test_unescape_backslashes(self):
+        assert iyore.Pattern.unescape(r"\\\.") == r"\."
+        assert iyore.Pattern.unescape(r"a\\q") == r"a\q"
+        assert iyore.Pattern.unescape(r"a\\\\q") == r"a\\q"
+        assert iyore.Pattern.unescape(r"a\\\\\\q") == r"a\\\q"
+
+    def test_escape_unescape_inverse_functions_randomly(self):
+        for _ in range(2000):
+            random_string = "".join(random.choice(string.printable) for i in range(random.randint(1, 50)))
+            escaped = iyore.Pattern.escape(random_string)
+            unescaped = iyore.Pattern.unescape(escaped)
+            assert unescaped == random_string
 
 class TestFillingWithLiterals:
     @pytest.fixture(scope= "module", params= ["manual", "parsed"])

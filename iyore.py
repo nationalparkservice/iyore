@@ -417,7 +417,23 @@ class Pattern(object):
     @staticmethod
     def escape(literal):
         # a less-agressive version of re.escape that only escapes known regex special characters
+        # converts a literal string into a regular expression that matches only that string
         return re.sub(r"[.\\+*?^$\[\]{}()|/]", r"\\\g<0>", literal)
+
+    @staticmethod
+    def isLiteralRegex(regex):
+        # whether the given regular expression contains only literals and escaped special characters, i.e. has only 1 possible match
+        # assumes input is a valid regex
+        return re.search(r"(?<!\\)[.+*?^$\[\]{}()|/]", regex) is None and re.search(r"(?<!\\)\\([AbBdDsSwWZ]|\d+)", regex) is None
+
+    @staticmethod
+    def unescape(regex):
+        # de-escape a regular expression containing only literals and escaped special characters into the literal string it matches
+        # assumes input is a valid regex
+        if not Pattern.isLiteralRegex(regex):
+            raise ValueError("Only literal regular expressions should be unescaped, this one contains unescaped special characters: {}".format(regex))
+        # return re.sub(r"(?<!\\)\\(?!\\)", "", regex).replace("\\\\", "\\")
+        return re.sub(r"(?<!\\)\\", "", regex).replace("\\\\", "\\")
 
     @staticmethod
     def split_named_groups(regex_string):
