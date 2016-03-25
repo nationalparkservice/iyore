@@ -75,7 +75,7 @@ structure: each subfolder or file is indented one level further than its parent.
 indentation character and width.)
 
 The two kinds of data we actually want to access are `quotes` and `images`. We
-refer to these as **`Endpoint`s**, which are specified by prefixing the regex
+refer to these as **`Endpoint`**s, which are specified by prefixing the regex
 pattern for a file or folder with `<endpoint_name>` and a colon. (Note that
 `Endpoint`s could be folders as well as files, and there can be more folders or
 `Endpoint`s within them.)
