@@ -701,7 +701,7 @@ class Entry(object):
 ## UTILITIES ##
 ###############
 
-def copyTo(src_dataset, dst_dataset, **endpointFilters):
+def copyTo(src_dataset, dst_dataset, all= {}, **endpointFilters):
     # Copy data from src_dataset to dst_dataset
 
     # Use keyword arguments for each of the endpoints in src_dataset that you want to filter,
@@ -764,6 +764,7 @@ def copyTo(src_dataset, dst_dataset, **endpointFilters):
         src_ep, dst_ep = src_dataset[endpoint_name], dst_dataset[endpoint_name]
         dst_parts = dst_ep.parts
         filters = endpointFilters.get(endpoint_name, {})
+        filters.extended(all)
 
         for entry in src_ep(**filters):
             filled_parts = [ part.fill(entry.fields, raise_on_nonexistant_fields= False) for part in dst_parts ]
