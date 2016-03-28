@@ -728,9 +728,9 @@ def copyTo(src_dataset, dst_dataset, all= {}, **endpointFilters):
             if maybe_internal_parts == dst_dataset.endpoints[maybe_leaf].parts[:len(maybe_internal_parts)]:
                 # maybe_internal's parts are a prefix of maybe_leaf's parts
                 endpoints_to_use.remove(maybe_internal)
-                print("{} is an internal endpoint in dst_dataset - tossing".format(maybe_internal))
-            else:
-                print("{} may be a leaf endpoint in dst_dataset - keeping".format(maybe_internal))
+                # print("{} is an internal endpoint in dst_dataset - tossing".format(maybe_internal))
+            # else:
+                # print("{} may be a leaf endpoint in dst_dataset - keeping".format(maybe_internal))
 
     print("Using overlapping leaf endpoints {}".format(endpoints_to_use))
 
@@ -746,10 +746,10 @@ def copyTo(src_dataset, dst_dataset, all= {}, **endpointFilters):
         # TODO: warn user of potential metadata loss (field gone in new Dataset) and require kwarg to continue?
 
         for part in dst_ep.parts:
-            pattern_parts, named_group_positions = iyore.Pattern.split_named_groups(part.value)
+            pattern_parts, named_group_positions = Pattern.split_named_groups(part.value)
             non_named_group_indicies = set(range(len(pattern_parts))).difference(named_group_positions.values())
             for i in non_named_group_indicies:
-                if not iyore.Pattern.isLiteralRegex(pattern_parts[i]):
+                if not Pattern.isLiteralRegex(pattern_parts[i]):
                     # TODO: collect all such errors and raise just once, so user can see all syntax errors at once instead of re-running
                     nonliteral = pattern_parts[i]
                     desc = 'Un-grouped regex pattern used in destination endpoint "{}"'.format(endpoint_name)
@@ -764,11 +764,11 @@ def copyTo(src_dataset, dst_dataset, all= {}, **endpointFilters):
         src_ep, dst_ep = src_dataset[endpoint_name], dst_dataset[endpoint_name]
         dst_parts = dst_ep.parts
         filters = endpointFilters.get(endpoint_name, {})
-        filters.extended(all)
+        filters.update(all)
 
         for entry in src_ep(**filters):
             filled_parts = [ part.fill(entry.fields, raise_on_nonexistant_fields= False) for part in dst_parts ]
-            unescaped_parts = [ iyore.Pattern.unescape(part.value) for part in filled_parts ]
+            unescaped_parts = [ Pattern.unescape(part.value) for part in filled_parts ]
             dst_path = os.path.join(str(dst_ep.base), *unescaped_parts)
 
             print("Copying {}".format(entry.path))
