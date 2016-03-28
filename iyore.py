@@ -42,11 +42,11 @@ class Dataset(object):
     def __init__(self, path, structure= None):
         if structure is None:
             # TODO: smarter finding structure file
-            dirname, basename = os.path.split(path)
-            if basename == "":
-                basename = structureFileName
-            self.base = Entry(dirname)
-            self.endpoints = self._parseStructureFile(structfilePath= os.path.join(dirname, basename))
+            if os.path.isdir(path):
+                path = os.path.join(path, structureFileName)
+
+            self.base = Entry(os.path.dirname(path))
+            self.endpoints = self._parseStructureFile(structfilePath= path)
         else:
             self.base = Entry(path)
             self.endpoints = self._parseStructureFile(structfileString= str(structure))
