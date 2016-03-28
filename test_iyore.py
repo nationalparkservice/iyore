@@ -549,6 +549,46 @@ class TestInteractions:
         fields.add("path")
         assert fields.issubset(edir)
 
+## TODO: tests for copyTo
+class TestRestructuring:
+    pass
+# # BASIC
+# static one
+#     dir_(?P<char>[A-Z])
+#         datafiles: COPIED_(?P<name>[A-Z]{4})_(?P<num>\d)_(?P<char>[A-Z])\.txt
+# static two
+#     siteDocs: COPIED_(?P<name>[A-Z]{4}) (?P<title>.*)\.(?P<extension>.+)
+# static three
+#     basic: COPIED_file_(?P<char>[A-Z])\.txt
+
+# # SKIP NON-LEAF ENDPOINTS
+# s1: static one
+#     datadir: dir_(?P<char>[A-Z])
+#         datafiles: COPIED_(?P<name>[A-Z]{4})_(?P<num>\d)_(?P<char>[A-Z])\.txt
+# static two
+#     siteDocs: COPIED_(?P<name>[A-Z]{4}) (?P<title>.*)\.(?P<extension>.+)
+# static three
+#     basic: COPIED_file_(?P<char>[A-Z])\.txt
+
+# ALTER PATTERNS
+# s1: static top-level renamed
+#     datadir: dir for the character '(?P<char>[A-Z])'
+#         datafiles: num-(?P<num>\d)_name-(?P<name>[A-Z]{4})_char-(?P<char>[A-Z])\.txt
+# static two
+#     siteDocs: (?P<title>.*) \((?P<name>[A-Z]{4})\)\.(?P<extension>.+)
+# static three
+#     basic: (?P<char>[A-Z])\.txt
+
+# ALTER STRUCTURE
+# Datafiles
+#     Name - (?P<name>[A-Z]{4})
+#         Char - (?P<char>[A-Z])
+#             datafiles: (?P<num>\d)\.txt
+
+# Site Docs
+#     kind: (?P<extension>.+)
+#         siteDocs: (?P<name>[A-Z]{4}) (?P<title>.*)\.(?P<extension>.+)
+
 if __name__ == '__main__':
     makeTestTree(None)
     # makeBasicStructureFile(None)

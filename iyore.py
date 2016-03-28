@@ -6,6 +6,7 @@ from past.builtins import basestring
 
 import re
 import os
+import shutil
 import sys
 import numbers
 import io
@@ -14,7 +15,6 @@ import itertools
 import operator
 import inspect
 import traceback
-import heapq
 
 ## TODO overall:
 
@@ -576,6 +576,12 @@ class Pattern(object):
     def __repr__(self):
         return 'Pattern("{}")'.format(self.value)
 
+    def __str__(self):
+        return self.value
+
+    def __eq__(self, pattern):
+        return self.value == pattern.value
+
 
 class Entry(object):
 
@@ -691,3 +697,87 @@ class Entry(object):
     def __repr__(self):
         return "Entry('{}', fields= {})".format(self.path, self.fields)
 
+###############
+## UTILITIES ##
+###############
+
+def copyTo(src_dataset, dst_dataset, **endpointFilters):
+    # Copy data from src_dataset to dst_dataset
+
+    # Use keyword arguments for each of the endpoints in src_dataset that you want to filter,
+    # and pass in a dict equivalent to the kwargs you'd give that endpoint as a filter if calling it,
+    # or False to not include it at all
+
+    ## Select overlapping Endpoints between the datasets
+    shared_endpoints = set(src_dataset.endpoints.keys()).intersection(set(dst_dataset.endpoints.keys()))
+    endpoints_to_use = {name for name in shared_endpoints if endpointFilters.get(name, None) is not False}
+
+    ## Remove non-leaf Endpoints in the destination dataset
+    ## (any non-leaf Endpoints will get constructed through the copying of their children,
+    ## but copying top-level Endpoints *and* their children will likely result in copying tons of
+    ## unwanted and improperly-structured data)
+    for endpoint_name_a in shared_endpoints:
+        for endpoint_name_b in shared_endpoints:
+            if endpoint_name_a == endpoint_name_b:
+                continue
+            if endpoint_name_a not in endpoints_to_use or endpoint_name_b not in endpoints_to_use:
+                continue
+
+            maybe_internal, maybe_leaf = sorted([endpoint_name_a, endpoint_name_b], key= lambda ep: len(dst_dataset.endpoints[ep].parts))
+            maybe_internal_parts = dst_dataset.endpoints[maybe_internal].parts
+            if maybe_internal_parts == dst_dataset.endpoints[maybe_leaf].parts[:len(maybe_internal_parts)]:
+                # maybe_internal's parts are a prefix of maybe_leaf's parts
+                endpoints_to_use.remove(maybe_internal)
+                print("{} is an internal endpoint in dst_dataset - tossing".format(maybe_internal))
+            else:
+                print("{} may be a leaf endpoint in dst_dataset - keeping".format(maybe_internal))
+
+    print("Using overlapping leaf endpoints {}".format(endpoints_to_use))
+
+    ## Ensure each destination Endpoint's fields are a subset of its corresponding source Endpoint's fields
+    ## (otherwise, there will be fields that we can't fill in)
+    ## Also ensure that there are no regex patterns besides named groups and literals in each destination Endpoint's pattern,
+    ## since these are impossible to fill in
+    for endpoint_name in endpoints_to_use:
+        src_ep, dst_ep = src_dataset[endpoint_name], dst_dataset[endpoint_name]
+        if not dst_ep.fields.issubset(dst_ep.fields):
+            raise ValueError('The Endpoint "{}" in the destination Dataset uses these fields not present in the source Dataset: {}'.format(endpoint_name, dst_ep.fields.difference(src_ep.fields)))
+
+        # TODO: warn user of potential metadata loss (field gone in new Dataset) and require kwarg to continue?
+
+        for part in dst_ep.parts:
+            pattern_parts, named_group_positions = iyore.Pattern.split_named_groups(part.value)
+            non_named_group_indicies = set(range(len(pattern_parts))).difference(named_group_positions.values())
+            for i in non_named_group_indicies:
+                if not iyore.Pattern.isLiteralRegex(pattern_parts[i]):
+                    # TODO: collect all such errors and raise just once, so user can see all syntax errors at once instead of re-running
+                    nonliteral = pattern_parts[i]
+                    desc = 'Un-grouped regex pattern used in destination endpoint "{}"'.format(endpoint_name)
+                    highlight_prefix_whitespace = sum(len(p_part) for p_part in pattern_parts[:i]) * " "
+                    highlight = highlight_prefix_whitespace + "^" * len(nonliteral)
+                    exp = "I don't know what value to fill in there! Either create a named field for this part of the pattern (that's also a field in the source Endpoint), or use a literal instead."
+                    error_message = "\n".join([desc, part.value, highlight, exp])
+                    raise ValueError(error_message)
+
+    ## Entry-by-entry in src, use fields in src entry to fill in groups in dst pattern, generating appropriate path for the file
+    for endpoint_name in endpoints_to_use:
+        src_ep, dst_ep = src_dataset[endpoint_name], dst_dataset[endpoint_name]
+        dst_parts = dst_ep.parts
+        filters = endpointFilters.get(endpoint_name, {})
+
+        for entry in src_ep(**filters):
+            filled_parts = [ part.fill(entry.fields, raise_on_nonexistant_fields= False) for part in dst_parts ]
+            unescaped_parts = [ iyore.Pattern.unescape(part.value) for part in filled_parts ]
+            dst_path = os.path.join(str(dst_ep.base), *unescaped_parts)
+
+            print("Copying {}".format(entry.path))
+            print("     to {}".format(dst_path))
+            if not os.path.exists(os.path.dirname(dst_path)):
+                # print("     -- Creating dirs for {}".format(os.path.dirname(dst_path)))
+                os.makedirs(os.path.dirname(dst_path))
+            if os.path.isdir(entry.path):
+                # print("     -- Copying tree")
+                shutil.copytree(entry.path, dst_path)
+            else:
+                # print("     -- Copying file")
+                shutil.copy(entry.path, dst_path)
