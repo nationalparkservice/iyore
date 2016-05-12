@@ -771,14 +771,17 @@ def copyTo(src_dataset, dst_dataset, all= {}, **endpointFilters):
             unescaped_parts = [ Pattern.unescape(part.value) for part in filled_parts ]
             dst_path = os.path.join(str(dst_ep.base), *unescaped_parts)
 
-            print("Copying {}".format(entry.path))
-            print("     to {}".format(dst_path))
-            if not os.path.exists(os.path.dirname(dst_path)):
-                # print("     -- Creating dirs for {}".format(os.path.dirname(dst_path)))
-                os.makedirs(os.path.dirname(dst_path))
-            if os.path.isdir(entry.path):
-                # print("     -- Copying tree")
-                shutil.copytree(entry.path, dst_path)
+            if os.path.exists(dst_path):
+                print("Skipping existing file {}".format(dst_path))
             else:
-                # print("     -- Copying file")
-                shutil.copy(entry.path, dst_path)
+                print("Copying {}".format(entry.path))
+                print("     to {}".format(dst_path))
+                if not os.path.exists(os.path.dirname(dst_path)):
+                    # print("     -- Creating dirs for {}".format(os.path.dirname(dst_path)))
+                    os.makedirs(os.path.dirname(dst_path))
+                if os.path.isdir(entry.path):
+                    # print("     -- Copying tree")
+                    shutil.copytree(entry.path, dst_path)
+                else:
+                    # print("     -- Copying file")
+                    shutil.copy(entry.path, dst_path)
