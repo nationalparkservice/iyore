@@ -288,6 +288,51 @@ class Endpoint(object):
             for entry in self._match(self.base, parts, item_dict):
                 yield entry
 
+    def info(self, nExamples= 2):
+        """
+        Prints the number of distinct values for each field, some examples of those values,
+        and the total number of Entries in the Endpoint.
+
+        Parameters
+        ----------
+
+        nExamples : int or None, default 2
+
+            Number of example values to show for each field. Use 0 or None to not print examples.
+        """
+        field_vals = {}
+        entry_count = 0
+        for entry in self():
+            entry_count += 1
+            for field, val in iteritems(entry):
+                try:
+                    field_vals[field].add(val)
+                except KeyError:
+                    field_vals[field] = {val}
+        
+        field_counts = { field: len(vals) for field, vals in iteritems(field_vals) }
+        if nExamples:
+            examples = {}
+            for field, vals in iteritems(field_vals):
+                exs = []
+                for i in range(nExamples):
+                    try:
+                        exs.append(vals.pop())
+                    except KeyError:
+                        break
+                examples[field] = exs
+            
+        print("Fields:")
+        for field in sorted(self.fields):
+            if nExamples:
+                exs = ", ".join([ '"'+ex+'"' for ex in examples[field] ])
+                print('    {}: {} value{}, ex. {}'.format(field, field_counts[field], "s" if field_counts[field] > 1 else "", exs))
+            else:
+                print('    {}: {} value{}'.format(field, field_counts[field], "s" if field_counts[field] > 1 else ""))
+
+        print("")
+        print("{} Entries".format(entry_count))
+
     def __repr__(self):
         return "Endpoint('{}'), fields: {}".format([part.value for part in self.parts],
                                                    ", ".join(self.fields))
