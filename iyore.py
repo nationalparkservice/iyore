@@ -300,6 +300,8 @@ class Endpoint(object):
 
             Number of example values to show for each field. Use 0 or None to not print examples.
         """
+        # TODO: tests
+
         field_vals = {}
         entry_count = 0
         for entry in self():
@@ -332,6 +334,12 @@ class Endpoint(object):
 
         print("")
         print("{} Entries".format(entry_count))
+
+    def values(self, field):
+        """
+        Return a set of all values the given field takes on in this Endpoint.
+        """
+        return { entry[field] for entry in self() }
 
     def __repr__(self):
         return "Endpoint('{}'), fields: {}".format([part.value for part in self.parts],
