@@ -72,7 +72,7 @@ class Dataset(object):
         return mydir
 
     def __repr__(self):
-        return 'Dataset("{}")\nEndpoints:\n{}'.format(self.base.path, "\n".join("  - {}: {}".format(name, repr(endpoint)) for name, endpoint in iteritems(self.endpoints)))
+        return 'Dataset("{}")\nEndpoints:\n{}'.format(self.base.path, "\n".join("  * {} - fields: {}".format(name, ", ".join(endpoint.fields)) for name, endpoint in iteritems(self.endpoints)))
 
     def _parseStructureFile(self, structfilePath= None, structfileString= None):
         if structfilePath is None and structfileString is None:
