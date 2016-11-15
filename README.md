@@ -240,6 +240,29 @@ where each `dict` contains the keyword arguments you'd use for each of those que
 10 tigger : Chapters/10 In Which Christopher Robin Gives Pooh a Party and We Say Goodbye/tigger-quotes.txt
 ```
 
+## Exploring
+
+To quickly find out (or remind yourself) what sort of data you have, use the `info()` method of an Endpoint:
+
+```pycon
+>>> ds.quotes.info()
+Fields:
+    character: 3 values, ex. "pooh", "piglet"
+    chap_num: 10 values, ex. "01", "08"
+    chap_title: 10 values, ex. "In Which We Are Introduced", "In Which Piglet is Entirely Surrounded by Water"
+
+21 Entries
+```
+
+Similarly, to get all the distinct values for a field, use the `Endpoint.values(field)` method, which returns a `set`:
+
+```pycon
+>>> ds.quotes.values("character")
+{"pooh", "piglet", "tigger", "kanga", "owl", "roo", "christopher"}
+>>> ds.quotes.values("chap_num")
+{"01", "02", "03", "04", "05", "06", "07", "08", "09", "10"}
+```
+
 ------------
 
 ### Logistics
