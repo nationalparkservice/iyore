@@ -270,7 +270,14 @@ Similarly, to get all the distinct values for a field, use the `Endpoint.values(
 iyore is Python 2 and 3 cross-compatible, and depends only on the `future`
 package (which allows the cross-compatibility).
 
-To install iyore, just run `pip install iyore`.
+~~To install iyore, just run `pip install iyore`.~~
+
+Since pip's Terms of Service prohibit hosting content that is "intended for use by a government end-user
+as defined in part 772 of the United States Export Administration Regulations", which regulates the export of
+weapons technology such as chemical lasers, splat quenching, intrinsic magnetic gradiometers, and open-source
+Python code, iyore is, for now, only installable this way:
+
+`pip install --extra-index-url https://nationalparkservice.github.io/iyore/packages/ iyore`
 
 If you want to run the tests (which are extensive, but not complete),
 clone this repository, `cd` into it, and run `python setup.py test`,
