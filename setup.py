@@ -1,5 +1,13 @@
 from setuptools import setup, find_packages
 
+from codecs import open
+from os import path
+
+here = path.abspath(path.dirname(__file__))
+
+with open(path.join(here, "README.md"), encoding= "utf-8") as f:
+    long_description = f.read()
+
 import sys
 from setuptools.command.test import test as TestCommand
 
@@ -21,13 +29,20 @@ class PyTest(TestCommand):
         errno = pytest.main(self.pytest_args)
         sys.exit(errno)
 
+version = "0.0.1"
+
 setup(
     name= "iyore",
-    version= "0.0.1",
+    version= version,
     description= "Ease the thistly problem of accessing data stored in arbitrary, consistent directory structures",
-    url= "https://github.com/gjoseph92/iyore",
+    long_description= long_description,
+    url= "https://github.com/nationalparkservice/iyore",
+    download_url= "https://github.com/nationalparkservice/iyore/tarball/{}".format(version),
     author= "Gabe Joseph",
-    author_email= "gjoseph92@gmail.com",
+    author_email= "gabriel_joseph@partner.nps.gov",
+
+    keywords= "data filesystem science",
+    classifiers = [],
 
     py_modules= ["iyore"],
     install_requires= ['future'],

@@ -268,12 +268,13 @@ Similarly, to get all the distinct values for a field, use the `Endpoint.values(
 ### Logistics
 
 iyore is Python 2 and 3 cross-compatible, and depends only on the `future`
-package (which allows the cross-compatibility)
+package (which allows the cross-compatibility).
 
-To install iyore, clone this repository, `cd` into it, then run `pip install .`
+To install iyore, just run `pip install iyore`.
 
-If you want to run the tests (which are probably not complete), run `python
-setup.py test`, which will also install `pytest` if you don't already have it.
+If you want to run the tests (which are extensive, but not complete),
+clone this repository, `cd` into it, and run `python setup.py test`,
+which will also install `pytest` if you don't already have it.
 
 Though all functionality should work, this library is still in its infancy and
 subject to significant change. Plus, many planned features are still currently
@@ -283,6 +284,10 @@ missing.
 
 This project is in the worldwide [public domain](LICENSE.md). As stated in [CONTRIBUTING](CONTRIBUTING.md):
 
-> This project is in the public domain within the United States, and copyright and related rights in the work worldwide are waived through the [CC0 1.0 Universal public domain dedication](https://creativecommons.org/publicdomain/zero/1.0/).
+> This project is in the public domain within the United States,
+> and copyright and related rights in the work worldwide are waived through the
+> [CC0 1.0 Universal public domain dedication](https://creativecommons.org/publicdomain/zero/1.0/).
 >
-> All contributions to this project will be released under the CC0 dedication. By submitting a pull request, you are agreeing to comply with this waiver of copyright interest.
+> All contributions to this project will be released under the CC0 dedication.
+> By submitting a pull request, you are agreeing to comply with this waiver of copyright interest.
+
