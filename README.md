@@ -62,8 +62,8 @@ To easily access this data with iyore, we'd first write a **structure file** des
 ```
 Chapters
     (?P<chap_num>\d\d) (?P<chap_title>.+)
-        quotes: (?P<character>\w+)-quotes.txt
-        images: (?P<title>.*).png
+        quotes: (?P<character>\w+)-quotes\.txt
+        images: (?P<title>.*)\.png
 ```
 
 Each line contains a regular expression that matches a file or folder name.
