@@ -51,9 +51,33 @@ echo
 
 # Build the wheels in master
 # dist/ should be untracked in master and gh-pages, so it'll be unmodified by git when swiching branches
+
+# Some fancy footwork is required here,
+# because checking out master deletes wheels-commit.sh in the working tree,
+# then re-creates it when checking out gh-pages. This is usually fine,
+# but bash in mingw64 seems to throw a fit when trying to stat/open for write
+# a file it's currently executing.
+
+# The solution is slightly garish:
+
+ME=$0
+# 1. Untrack wheels-commit.sh,
+#    so git won't touch it when checking out
+#    (git doesn't touch untracked files in the working tree)
+git rm --cached $ME
+# 2. Commit the untracking
+git commit -m "Temporary commit to untrack $ME"
+# 3. Switch to master---$ME is not deleted since it's now untracked
 git checkout master
+# 4. Build the wheels (the important part)
 python setup.py bdist_wheel --universal
+# 5. Switch back to gh-pages---$ME is still in the work tree, but not tracked
 git checkout gh-pages
+# 6. Get rid of the temporary commit untracking $ME
+#    Because $ME is still in the work tree, and --mixed updates the index
+#    to expect $ME in the work tree, everything lines up and $ME is untouched
+#    and un-statted
+git reset --mixed HEAD^
 
 echo "Rebuilding package repository..."
 echo "********************************"
