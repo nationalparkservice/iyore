@@ -179,7 +179,7 @@ class Endpoint(object):
         self.parts = parts if all(isinstance(part, Pattern) for part in parts) else list(map(Pattern, parts))
         self.fields = set.union( *(set(part.fields) for part in self.parts) )
 
-    def __call__(self, items= None, sort= None, **params):
+    def __call__(self, items= None, sort= None, n= None, **params):
         literal_fill_fields = {}
         for param, value in iteritems(params):
             if param not in self.fields:
@@ -218,6 +218,9 @@ class Endpoint(object):
         else:
             matches = self._match(self.base, parts, params)
             
+        if n is not None:
+            matches = itertools.islice(matches, n)
+
         if sort is not None:
             # singleton string (entry attr to sort on)
             if isinstance(sort, basestring):

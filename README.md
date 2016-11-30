@@ -166,6 +166,9 @@ These are referred to as **filters**:
  iterable of `str` |  field's value must be in iterable
  callable          |  `callable(field's value)` must return True
 
+Lastly, you may only want to work with a few Entries when initially exploring a large Dataset.
+If you specify a number to the `n` keyword argument, at most only that many Entries will be located.
+
 ## Sorting
 
 To access your data in a particular order, use the `sort` keyword argument.
