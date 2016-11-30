@@ -29,7 +29,7 @@ class PyTest(TestCommand):
         errno = pytest.main(self.pytest_args)
         sys.exit(errno)
 
-version = "0.0.1"
+version = "0.0.2"
 
 setup(
     name= "iyore",
